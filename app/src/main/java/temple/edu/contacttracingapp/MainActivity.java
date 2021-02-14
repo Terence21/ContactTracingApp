@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
@@ -34,8 +35,9 @@ public class MainActivity extends AppCompatActivity {
 
         Intent serviceIntent = new Intent(this, LocatorService.class);
 
-        if (!isRunning(LocatorService.class)) {
+       if (!isRunning(LocatorService.class)) {
             startService(serviceIntent);
+           Log.i("running", "onCreate: " + "is running");
         }
 
 

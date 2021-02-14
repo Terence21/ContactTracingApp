@@ -2,19 +2,20 @@ package temple.edu.contacttracingapp;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Notification;
-import android.app.PendingIntent;
-import android.app.Service;
+import android.app.*;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 
 // https://developer.android.com/guide/components/services
 public class LocatorService extends Service {
@@ -60,17 +61,28 @@ public class LocatorService extends Service {
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+
         String channelID = "default";
-        Notification notification =
-                new Notification.Builder(this, channelID)
+        String channelName = "Foreground Service Channel";
+        NotificationChannel notificationChannel = new NotificationChannel(channelID, channelName, NotificationManager.IMPORTANCE_NONE);
+
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        manager.createNotificationChannel(notificationChannel);
+
+
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, channelID);
+        Notification notification = notificationBuilder.setOngoing(true)
                         .setContentTitle("Location change")
                         .setContentText("you have moved 10 meters from your last location")
                         .setSmallIcon(R.drawable.ic_launcher_background)
                         .setContentIntent(pendingIntent)
                         .setAutoCancel(false)
+                        .setPriority(NotificationManager.IMPORTANCE_MIN)
+                        .setCategory(Notification.CATEGORY_SERVICE)
                         .build();
 
-        startForeground(1, notification);
+        startForeground(2, notification);
         return super.onStartCommand(intent, flags, startId);
     }
 
