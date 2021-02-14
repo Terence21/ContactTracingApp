@@ -5,11 +5,13 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import com.google.android.material.button.MaterialButton;
 
 
 public class DashboardFragment extends Fragment {
 
-
+    MaterialButton startButton;
+    MaterialButton stopButton;
 
     public DashboardFragment() {
         // Required empty public constructor
@@ -34,6 +36,11 @@ public class DashboardFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_dashboard, container, false);
+        View view = inflater.inflate(R.layout.fragment_dashboard, container, false);
+
+        startButton = view.findViewById(R.id._startButton);
+        stopButton = view.findViewById(R.id._stopButton);
+
+        return view;
     }
 }
