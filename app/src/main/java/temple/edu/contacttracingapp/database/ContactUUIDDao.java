@@ -30,4 +30,7 @@ public interface ContactUUIDDao {
     @Query("UPDATE contactuuidmodel SET `index` = `index` + 1 WHERE `index` > -1")
     void incrementIndex();
 
+    @Query("DELETE FROM contactuuidmodel WHERE `index` = :index")
+    void delete(int index);
+
 }
