@@ -3,6 +3,8 @@ package temple.edu.contacttracingapp;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
@@ -51,9 +53,11 @@ public class DashboardFragment extends Fragment {
                 int id = view.getId();
                 switch (id){
                     case R.id._startButton:
+
                         listener.startLocatorService();
                         break;
                     case R.id._stopButton:
+                        // when stopped it loses foreground notification privileges.... should fix?
                         listener.stopLocatorService();
                         break;
                 }

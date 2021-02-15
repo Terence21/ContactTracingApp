@@ -10,6 +10,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
+import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.util.Log;
 import androidx.annotation.NonNull;
@@ -26,6 +27,8 @@ public class LocatorService extends Service {
     String latitude;
     String longitude;
 
+    Location prevLocation;
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -37,13 +40,44 @@ public class LocatorService extends Service {
     public void onCreate() {
 
         locationManager = getSystemService(LocationManager.class);
+
+        final CountDownTimer countDownTimer = new CountDownTimer(60000, 1000) {
+            @Override
+            public void onTick(long l) {
+
+            }
+
+            @Override
+            public void onFinish() {
+                Log.d("stationaryTimer", "YOU HAVE STAYED IN A LOCATION FOR MORE THAN 60 SECONDS");
+            }
+
+
+
+
+        };
+
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(@NonNull Location location) {
-                latitude = String.valueOf(location.getLatitude());
-                longitude = String.valueOf(location.getLongitude());
-                Log.i("latitude", "onLocationChanged: " + latitude);
-                Log.i("longitude", "onLocationChanged: " + longitude);
+
+                if (prevLocation == null){
+                    prevLocation = location;
+                }
+
+                if (location.distanceTo(prevLocation) >= 10.0) {
+                    latitude = String.valueOf(location.getLatitude());
+                    longitude = String.valueOf(location.getLongitude());
+                    Log.i("latitude", "onLocationChanged: " + latitude);
+                    Log.i("longitude", "onLocationChanged: " + longitude);
+
+                    countDownTimer.start();
+                    prevLocation = location;
+                }
+
+
+
+
             }
         };
 
