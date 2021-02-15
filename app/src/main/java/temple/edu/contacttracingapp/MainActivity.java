@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements DashboardFragment.ActivateServiceInterface {
 
     FragmentManager fm;
     DashboardFragment dashboardFragment;
@@ -32,14 +32,6 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id._mainFragmentFrame, dashboardFragment, "df")
                 .addToBackStack(null)
                 .commit();
-
-        Intent serviceIntent = new Intent(this, LocatorService.class);
-
-       if (!isRunning(LocatorService.class)) {
-            startService(serviceIntent);
-           Log.i("running", "onCreate: " + "is running");
-        }
-
 
     }
 
@@ -62,4 +54,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    public void startLocatorService() {
+        Intent serviceIntent = new Intent(this, LocatorService.class);
+        startService(serviceIntent);
+        Log.i("LocatorService", "Starting LocatorService");
+    }
+
+    @Override
+    public void stopLocatorService() {
+        Intent serviceIntent = new Intent(this, LocatorService.class);
+        stopService(serviceIntent);
+        Log.i("LocatorService", "Stopping LocatorService ");
+    }
 }

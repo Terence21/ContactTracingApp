@@ -1,6 +1,9 @@
 package temple.edu.contacttracingapp;
 
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,6 +15,7 @@ public class DashboardFragment extends Fragment {
 
     MaterialButton startButton;
     MaterialButton stopButton;
+    ActivateServiceInterface listener;
 
     public DashboardFragment() {
         // Required empty public constructor
@@ -41,6 +45,42 @@ public class DashboardFragment extends Fragment {
         startButton = view.findViewById(R.id._startButton);
         stopButton = view.findViewById(R.id._stopButton);
 
+        View.OnClickListener ocl = new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                int id = view.getId();
+                switch (id){
+                    case R.id._startButton:
+                        listener.startLocatorService();
+                        break;
+                    case R.id._stopButton:
+                        listener.stopLocatorService();
+                        break;
+                }
+            }
+        };
+
+        startButton.setOnClickListener(ocl);
+        stopButton.setOnClickListener(ocl);
+
         return view;
     }
+
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+
+        if (context instanceof ActivateServiceInterface){
+            listener = (ActivateServiceInterface) context;
+        } else{
+            throw new RuntimeException("Calling activity must implement instance of ActivateServiceInterface");
+        }
+
+    }
+
+    public interface ActivateServiceInterface{
+        public void startLocatorService();
+        public void stopLocatorService();
+    }
+
 }
