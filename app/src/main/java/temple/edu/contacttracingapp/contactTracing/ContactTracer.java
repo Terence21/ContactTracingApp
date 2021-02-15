@@ -39,28 +39,50 @@ public class ContactTracer {
     }
 
     private class ContactUUID{
-        private UUID uuid;
-        private Calendar calendar;
+        private String uuid;
+        private int year;
+        private int month;
+        private int day;
 
         public ContactUUID(){
-            this.uuid = UUID.randomUUID();
-            this.calendar = Calendar.getInstance();
+            this.uuid = UUID.randomUUID().toString();
+            Calendar calendar = Calendar.getInstance();
+            this.year = calendar.get(Calendar.YEAR);
+            this.month = calendar.get(Calendar.MONTH);
+            this.day = calendar.get(Calendar.DAY_OF_MONTH);
+
         }
 
-        public UUID getUuid() {
+        public String getUuid() {
             return uuid;
         }
 
-        public void setUuid(UUID uuid) {
+        public void setUuid(String uuid) {
             this.uuid = uuid;
         }
 
-        public Calendar getCalendar() {
-            return calendar;
+        public int getYear() {
+            return year;
         }
 
-        public void setCalendar(Calendar calendar) {
-            this.calendar = calendar;
+        public void setYear(int year) {
+            this.year = year;
+        }
+
+        public int getMonth() {
+            return month;
+        }
+
+        public void setMonth(int month) {
+            this.month = month;
+        }
+
+        public int getDay() {
+            return day;
+        }
+
+        public void setDay(int day) {
+            this.day = day;
         }
     }
 }
