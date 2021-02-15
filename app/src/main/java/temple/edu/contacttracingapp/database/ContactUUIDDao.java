@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object for accessing ContactUUIIDModel entities from Databse
+ * Data Access Object for accessing ContactUUIIDModel entities from Database
  */
 @Dao
 public interface ContactUUIDDao {

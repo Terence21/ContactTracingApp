@@ -75,18 +75,20 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
         final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
 
+
         Thread thread = new Thread() {
 
 
             @Override
             public void run() {
+
                 Calendar calendar = Calendar.getInstance();
                 int year = calendar.get(Calendar.YEAR);
-                int month = calendar.get(Calendar.MONTH);
-                int day = calendar.get(Calendar.DAY_OF_WEEK);
+                int month = calendar.get(Calendar.MONTH) + 1;
+                int day = calendar.get(Calendar.DAY_OF_MONTH);
 
                 ContactUUIDModel previousUUID = contactUUIDDao.getContactUUIDModel(0);
-
+                Log.i("calendar", "Today: " + month + "/" + day + "/" + year);
                 if (previousUUID != null) {
 
                     // only update if the day has changed from it's last launch

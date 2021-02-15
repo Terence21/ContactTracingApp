@@ -28,6 +28,7 @@ public class LocatorService extends Service {
     String longitude;
 
     Location prevLocation;
+    boolean isCountdown;
 
     @Nullable
     @Override
@@ -39,21 +40,23 @@ public class LocatorService extends Service {
     @Override
     public void onCreate() {
 
+        isCountdown = false;
         locationManager = getSystemService(LocationManager.class);
 
         final CountDownTimer countDownTimer = new CountDownTimer(60000, 1000) {
             @Override
             public void onTick(long l) {
-
+                isCountdown = true;
             }
 
+            /**
+             * create a Debug warning if the timer reaches 60 seconds...
+             */
             @Override
             public void onFinish() {
-                Log.d("stationaryTimer", "YOU HAVE STAYED IN A LOCATION FOR MORE THAN 60 SECONDS");
+                Log.d("stationaryTimer", "YOU HAVE STAYED IN A NEW LOCATION FOR MORE THAN 60 SECONDS");
+                isCountdown = false;
             }
-
-
-
 
         };
 
@@ -66,6 +69,11 @@ public class LocatorService extends Service {
                 }
 
                 if (location.distanceTo(prevLocation) >= 10.0) {
+                    // restart the countDownTimer
+                    if (isCountdown){
+                        countDownTimer.cancel();
+                        isCountdown = false;
+                    }
                     latitude = String.valueOf(location.getLatitude());
                     longitude = String.valueOf(location.getLongitude());
                     Log.i("latitude", "onLocationChanged: " + latitude);
@@ -113,7 +121,7 @@ public class LocatorService extends Service {
                         .setSmallIcon(R.drawable.ic_launcher_background)
                         .setContentIntent(pendingIntent)
                         .setAutoCancel(false)
-                        .setPriority(NotificationManager.IMPORTANCE_MIN)
+                        .setPriority(NotificationManager.IMPORTANCE_MAX)
                         .setCategory(Notification.CATEGORY_SERVICE)
                         .build();
 
