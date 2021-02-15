@@ -9,6 +9,9 @@ import androidx.room.Query;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Data Access Object for accessing ContactUUIIDModel entities from Databse
+ */
 @Dao
 public interface ContactUUIDDao {
 
@@ -21,6 +24,7 @@ public interface ContactUUIDDao {
     @Insert
     void insert(ContactUUIDModel contactUUIDModel);
 
+    // FIX: can't currently use because of primary key
     @Query("UPDATE contactuuidmodel SET uuid = :u, year = :y, month = :m, day = :d WHERE `index` = :i")
     void replace(int i, String u, int y, int m, int d);
 

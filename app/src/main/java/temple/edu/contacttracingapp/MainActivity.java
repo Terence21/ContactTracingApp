@@ -34,10 +34,17 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     FragmentManager fm;
     DashboardFragment dashboardFragment;
-    List<ContactUUIDModel> contactUUIDModelList;
+
+    ArrayList<ContactUUIDModel> contactUUIDModelArrayList;
     
     private static final int DB_SIZE_LIMIT = 14;
 
+    /**
+     * Check if application has GPS permissions, if not request them
+     * add dashboardFragment to activity
+     * updateUUID and log the current database
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,7 +65,12 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         logDatabase();
 
     }
-    
+
+    /**
+     * Using Android Room to access SQLITE
+     * compare the most recent date to the current date... if the same day do not add UUID
+     * check that the DB does not contain 14 entries, if so.. treat as a queue and remove the first in
+     */
     public void updateUUID() {
         AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
         final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
@@ -77,16 +89,16 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
                 if (previousUUID != null) {
 
-                    // only update if the day has changed
+                    // only update if the day has changed from it's last launch
                     if (previousUUID.month == month && previousUUID.year == year && previousUUID.day == day) {
                         Log.i("Database", "DatabaseOperation: " + "insertion incomplete");
                     } else {
                         int size = contactUUIDDao.getSize();
                         if (size == DB_SIZE_LIMIT) {
+                            // delete from the end of the table... where index 13 is the last
                             contactUUIDDao.delete(DB_SIZE_LIMIT - 1);
                         }
-                        contactUUIDDao.incrementIndex(); // delete from the end of the table... where index 13 is the last
-
+                        contactUUIDDao.incrementIndex();
                         String uuid = UUID.randomUUID().toString();
                         final ContactUUIDModel contactUUIDModel = new ContactUUIDModel(0, uuid, year, month, day);
 
@@ -112,6 +124,9 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     }
 
+    /**
+     * Reset Database back to size 0 for testing
+     */
     public void resetDatabase(){
         AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
         final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
@@ -121,8 +136,14 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
             @Override
             public void run() {
-                contactUUIDDao.delete(0);
-                contactUUIDDao.delete(1);
+                contactUUIDModelArrayList = (ArrayList<ContactUUIDModel>) contactUUIDDao.getAll();
+                if (contactUUIDModelArrayList != null){
+                    if (contactUUIDModelArrayList.size() > 0){
+                        for (ContactUUIDModel contactUUIDModel: contactUUIDModelArrayList){
+                            contactUUIDDao.delete(contactUUIDModel.index);
+                        }
+                    }
+                }
             }
 
         };
@@ -136,6 +157,9 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         db.close();
     }
 
+    /**
+     * Log all entries of database
+     */
     public void logDatabase(){
 
         AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
@@ -163,6 +187,11 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     }
 
+    /**
+     *
+     * @param serviceClass service to be checked
+     * @return true if service is running, false if service is not running
+     */
     private boolean isRunning(Class<?> serviceClass) {
         ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : activityManager.getRunningServices(Integer.MAX_VALUE)) {
@@ -173,15 +202,24 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         return false;
     }
 
+    /**
+     *
+     * @return if service has or does not have GPS permission
+     */
     private boolean hasGPSPermission() {
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
+    /**
+     * Request FINE location permission
+     */
     private void requestGPSPermission() {
         requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1111);
     }
 
-
+    /**
+     * Callback method for DashboardFragment start button, stop locator service
+     */
     @Override
     public void startLocatorService() {
         Intent serviceIntent = new Intent(this, LocatorService.class);
@@ -189,6 +227,9 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         Log.i("LocatorService", "Starting LocatorService");
     }
 
+    /**
+     * Callback method for DashboardFragment stop button, end locator service
+     */
     @Override
     public void stopLocatorService() {
         Intent serviceIntent = new Intent(this, LocatorService.class);

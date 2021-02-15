@@ -6,6 +6,9 @@ import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
+/**
+ * Model class for UUID, each method is a respective column with the uuid being the primary key
+ */
 @Entity
 public class ContactUUIDModel{
 
