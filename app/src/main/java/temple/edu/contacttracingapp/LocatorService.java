@@ -69,6 +69,7 @@ public class LocatorService extends Service {
                 }
 
                 if (location.distanceTo(prevLocation) >= 10.0) {
+                    showNotification();
                     // restart the countDownTimer
                     if (isCountdown){
                         countDownTimer.cancel();
@@ -102,6 +103,19 @@ public class LocatorService extends Service {
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 1, locationListener);
         locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 0, 1, locationListener);
 
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        locationManager.removeUpdates(locationListener);
+    }
+
+    public void showNotification(){
+
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
@@ -116,25 +130,16 @@ public class LocatorService extends Service {
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, channelID);
         Notification notification = notificationBuilder.setOngoing(true)
-                        .setContentTitle("Location change")
-                        .setContentText("you have moved 10 meters from your last location")
-                        .setSmallIcon(R.drawable.ic_launcher_background)
-                        .setContentIntent(pendingIntent)
-                        .setAutoCancel(false)
-                        .setPriority(NotificationManager.IMPORTANCE_MAX)
-                        .setCategory(Notification.CATEGORY_SERVICE)
-                        .build();
+                .setContentTitle("Location change")
+                .setContentText("you have moved 10 meters from your last location")
+                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(false)
+                .setPriority(NotificationManager.IMPORTANCE_MAX)
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .build();
 
         startForeground(2, notification);
-        return super.onStartCommand(intent, flags, startId);
-    }
-
-
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        locationManager.removeUpdates(locationListener);
     }
 
 
