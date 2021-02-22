@@ -6,10 +6,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
 import androidx.room.Room;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
 import edu.temple.contacttracer.database.AppDatabase;
 import edu.temple.contacttracer.database.ContactUUIDDao;
 import edu.temple.contacttracer.database.ContactUUIDModel;
@@ -33,6 +39,8 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     ArrayList<ContactUUIDModel> contactUUIDModelArrayList;
     
     private static final int DB_SIZE_LIMIT = 14;
+
+    private String payload;
 
     /**
      * Check if application has GPS permissions, if not request them
@@ -58,6 +66,23 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
         updateUUID();
         logDatabase();
+
+        FirebaseMessagingService firebaseMessagingService = new FirebaseMessagingService(){
+            @Override
+            public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
+                payload = remoteMessage.getData().get("payload");
+                Log.i("PAYLOAD", "onMessageReceived: " + payload);
+                super.onMessageReceived(remoteMessage);
+            }
+        };
+
+        FirebaseMessaging.getInstance().subscribeToTopic("TRACKING").addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull  Task<Void> task) {
+                String msg = task.isSuccessful()? "success": "failed";
+                Log.d("subscribeMessage", msg);
+            }
+        });
 
     }
 
