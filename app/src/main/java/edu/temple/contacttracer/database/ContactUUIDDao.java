@@ -1,12 +1,10 @@
-package temple.edu.contacttracingapp.database;
+package edu.temple.contacttracer.database;
 
 
 import androidx.room.Dao;
-import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**

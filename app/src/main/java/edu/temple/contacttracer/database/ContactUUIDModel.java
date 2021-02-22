@@ -1,6 +1,5 @@
-package temple.edu.contacttracingapp.database;
+package edu.temple.contacttracer.database;
 
-import android.provider.BaseColumns;
 import androidx.annotation.NonNull;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;

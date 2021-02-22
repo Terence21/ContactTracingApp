@@ -1,24 +1,19 @@
-package temple.edu.contacttracingapp;
+package edu.temple.contacttracer;
 
 import android.Manifest;
 import android.app.ActivityManager;
-import android.app.Notification;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
 import androidx.room.Room;
-import temple.edu.contacttracingapp.database.AppDatabase;
-import temple.edu.contacttracingapp.database.ContactUUIDDao;
-import temple.edu.contacttracingapp.database.ContactUUIDModel;
+import edu.temple.contacttracer.database.AppDatabase;
+import edu.temple.contacttracer.database.ContactUUIDDao;
+import edu.temple.contacttracer.database.ContactUUIDModel;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.util.*;
 
 
