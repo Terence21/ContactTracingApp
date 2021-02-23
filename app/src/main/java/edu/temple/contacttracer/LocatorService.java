@@ -19,6 +19,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import edu.temple.contacttracer.database.ContactUUIDModel;
+import okhttp3.*;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -137,6 +138,8 @@ public class LocatorService extends Service {
         });
 
 
+
+
     }
 
     // https://stackoverflow.com/questions/51587863/bad-notification-for-start-foreground-invalid-channel-for-service-notification
@@ -187,7 +190,19 @@ public class LocatorService extends Service {
         startForeground(2, notification);
     }
 
-    public String sendSedentaryEvent(String uuid, String latitude, String longitude, String sedentary_begin, String sedentary_end){
+
+    public String uuid;
+    private String lat;
+    private String longt;
+    private String sedentary_begin;
+    private String sedentary_end;
+
+    public String sendSedentaryEvent(String uid, final String latitude, final String longitude, String sed_begin, final String sed_end){
+        uuid = uid;
+        this.lat = latitude;
+        this.longt = longitude;
+        this.sedentary_begin = sed_begin;
+        this.sedentary_end = sed_end;
         final String[] output = {""};
         final String body = "{ 'uuid': '" + uuid + "'" +
                 ", 'latitude': '" + latitude + "'" +
@@ -200,39 +215,31 @@ public class LocatorService extends Service {
                 super.run();
 
                 try {
-                    URL url = new URL(ENDPOINT);
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setRequestMethod("POST");
-                    connection.setRequestProperty("Content-Type", "application/json; utf-8");
-                    connection.setDoOutput(true);
+                   
+                    RequestBody formBody = new FormBody.Builder()
+                            .add("uuid", uuid)
+                            .add("latitude", lat)
+                            .add("longitude", longt)
+                            .add("sedentary_begin", sedentary_begin)
+                            .add("sedentary_end", sedentary_end)
+                            .build();
 
+                    Request request = new Request.Builder()
+                            .url(ENDPOINT)
+                            .post(formBody)
+                            .build();
 
+                    OkHttpClient httpClient = new OkHttpClient();
+                    try(Response response = httpClient.newCall(request).execute()){
 
-
-                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK){
-                        Log.i("CONNECTION", "SendSedentaryEvent: CONNECTION ESTABLISHED");
-
-                        try (OutputStream os = connection.getOutputStream()){
-                            byte[] input = body.getBytes("utf-8");
-                            os.write(input, 0, input.length);
-                        } catch (Exception e){
-                            Log.i("OUTPUTSTREAM", "SendSedentaryEvent: COULD NOT WRITE TO URL");
-                        }
-
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                        String line;
-                        StringBuilder sb = new StringBuilder();
-                        while ((line = reader.readLine()) != null){
-                            sb.append(line.trim());
-                        }
-                        reader.close();
-                        connection.disconnect();
-                        Log.i("RESPONSE", "response: " + sb.toString());
-                        output[0] = sb.toString();
-                    } else{
+                        output[0] = response.body().string();
+                        Log.i("RESPONSE", "response: " + output[0]);
+                    } catch (Exception e){
+                        e.printStackTrace();
                         Log.i("CONNECTION", "SendSedentaryEvent: CONNECTION NOT ESTABLISHED");
                         output[0] = null;
                     }
+
                 } catch (Exception e) {
                     e.printStackTrace();
                     output[0] = null;

@@ -39,6 +39,7 @@ dependencies {
     // When using the BoM, you don't specify versions in Firebase library dependencies
     implementation 'com.google.firebase:firebase-messaging'
     implementation 'com.google.firebase:firebase-analytics'
+    implementation("com.squareup.okhttp3:okhttp:4.9.0")
 
 
     def room_version = "2.2.6"
