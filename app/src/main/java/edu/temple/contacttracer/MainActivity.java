@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
 import androidx.room.Room;
+import androidx.room.RoomDatabase;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -144,6 +145,11 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         }
         db.close();
 
+    }
+
+    public static List<ContactUUIDModel> getContactModelList(Context context){
+        AppDatabase db = Room.databaseBuilder(context, AppDatabase.class, "uuid-database").build();
+        return db.contactUUIDDao().getAll();
     }
 
     /**

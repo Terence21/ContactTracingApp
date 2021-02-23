@@ -13,15 +13,29 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import edu.temple.contacttracer.database.ContactUUIDModel;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
 
 // https://developer.android.com/guide/components/services
 public class LocatorService extends Service {
 
+    private static final String ENDPOINT = "https://kamorris.com/lab/ct_tracking.php";
     LocationManager locationManager;
     LocationListener locationListener;
 
     String latitude;
     String longitude;
+    String begin;
+    String end;
 
     Location prevLocation;
     boolean isCountdown;
@@ -52,6 +66,11 @@ public class LocatorService extends Service {
             public void onFinish() {
                 Log.d("stationaryTimer", "YOU HAVE STAYED IN A NEW LOCATION FOR MORE THAN 60 SECONDS");
                 isCountdown = false;
+                end = Calendar.getInstance().getTime().toString();
+
+                List <ContactUUIDModel> contactUUIDModelList = MainActivity.getContactModelList(getApplicationContext());
+                String mostRecentUUID = contactUUIDModelList.get(0).uuid;
+                sendSedentaryEvent(mostRecentUUID, latitude, longitude, begin, end);
             }
 
         };
@@ -77,6 +96,7 @@ public class LocatorService extends Service {
                     Log.i("longitude", "onLocationChanged: " + longitude);
 
                     countDownTimer.start();
+                    begin = Calendar.getInstance().getTime().toString();
                     prevLocation = location;
                 }
 
@@ -136,6 +156,51 @@ public class LocatorService extends Service {
                 .build();
 
         startForeground(2, notification);
+    }
+
+    public String sendSedentaryEvent(String uuid, String latitude, String longitude, String sedentary_begin, String sedentary_end){
+        try {
+            URL url = new URL(ENDPOINT);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json; utf-8");
+            connection.setDoOutput(true);
+
+            String body = "{ 'uuid': '" + uuid + "'" +
+                    ", 'latitude': '" + latitude + "'" +
+                    ", 'longitude': '" + longitude + "'" +
+                    ", 'sedentary_begin': '" + sedentary_begin + "'" +
+                    ", 'sedentary_end': " + sedentary_end + "' }";
+
+
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK){
+                Log.i("CONNECTION", "SendSedentaryEvent: CONNECTION ESTABLISHED");
+
+                try (OutputStream os = connection.getOutputStream()){
+                    byte[] input = body.getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                } catch (Exception e){
+                    Log.i("OUTPUTSTREAM", "SendSedentaryEvent: COULD NOT WRITE TO URL");
+                }
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String line;
+                StringBuilder sb = new StringBuilder();
+                while ((line = reader.readLine()) != null){
+                    sb.append(line.trim());
+                }
+                reader.close();
+                connection.disconnect();
+                Log.i("RESPONSE", "response: " + sb.toString());
+                return sb.toString();
+            } else{
+                Log.i("CONNECTION", "SendSedentaryEvent: CONNECTION NOT ESTABLISHED");
+                return null;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
 
