@@ -13,6 +13,11 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
 import edu.temple.contacttracer.database.ContactUUIDModel;
 
 import java.io.BufferedReader;
@@ -37,8 +42,16 @@ public class LocatorService extends Service {
     String begin;
     String end;
 
+    String payload;
+
     Location prevLocation;
     boolean isCountdown;
+
+    /**
+     *
+     * TODO:
+     *      1. handle payload by checking if distance is greater than 6 feet, and that it is not your own uuid
+     */
 
     @Nullable
     @Override
@@ -49,6 +62,7 @@ public class LocatorService extends Service {
 
     @Override
     public void onCreate() {
+        super.onCreate();
 
         isCountdown = false;
         locationManager = getSystemService(LocationManager.class);
@@ -69,8 +83,10 @@ public class LocatorService extends Service {
                 end = Calendar.getInstance().getTime().toString();
 
                 List <ContactUUIDModel> contactUUIDModelList = MainActivity.getContactModelList(getApplicationContext());
-                String mostRecentUUID = contactUUIDModelList.get(0).uuid;
-                sendSedentaryEvent(mostRecentUUID, latitude, longitude, begin, end);
+                if (contactUUIDModelList.size() > 0) {
+                    String mostRecentUUID = contactUUIDModelList.get(0).uuid;
+                    sendSedentaryEvent(mostRecentUUID, latitude, longitude, begin, end);
+                };
             }
 
         };
@@ -99,14 +115,27 @@ public class LocatorService extends Service {
                     begin = Calendar.getInstance().getTime().toString();
                     prevLocation = location;
                 }
-
-
-
-
             }
         };
 
-        super.onCreate();
+
+        FirebaseMessagingService firebaseMessagingService = new FirebaseMessagingService(){
+            @Override
+            public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
+                payload = remoteMessage.getData().get("payload");
+                Log.i("PAYLOAD", "onMessageReceived: " + payload);
+                super.onMessageReceived(remoteMessage);
+            }
+        };
+
+        FirebaseMessaging.getInstance().subscribeToTopic("TRACKING").addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                String msg = task.isSuccessful()? "success": "failed";
+                Log.d("subscribeMessage", msg);
+            }
+        });
+
 
     }
 
@@ -159,48 +188,66 @@ public class LocatorService extends Service {
     }
 
     public String sendSedentaryEvent(String uuid, String latitude, String longitude, String sedentary_begin, String sedentary_end){
-        try {
-            URL url = new URL(ENDPOINT);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json; utf-8");
-            connection.setDoOutput(true);
+        final String[] output = {""};
+        final String body = "{ 'uuid': '" + uuid + "'" +
+                ", 'latitude': '" + latitude + "'" +
+                ", 'longitude': '" + longitude + "'" +
+                ", 'sedentary_begin': '" + sedentary_begin + "'" +
+                ", 'sedentary_end': " + sedentary_end + "' }";
+        Thread thread = new Thread(){
+            @Override
+            public void run() {
+                super.run();
 
-            String body = "{ 'uuid': '" + uuid + "'" +
-                    ", 'latitude': '" + latitude + "'" +
-                    ", 'longitude': '" + longitude + "'" +
-                    ", 'sedentary_begin': '" + sedentary_begin + "'" +
-                    ", 'sedentary_end': " + sedentary_end + "' }";
+                try {
+                    URL url = new URL(ENDPOINT);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Content-Type", "application/json; utf-8");
+                    connection.setDoOutput(true);
 
 
-            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK){
-                Log.i("CONNECTION", "SendSedentaryEvent: CONNECTION ESTABLISHED");
 
-                try (OutputStream os = connection.getOutputStream()){
-                    byte[] input = body.getBytes("utf-8");
-                    os.write(input, 0, input.length);
-                } catch (Exception e){
-                    Log.i("OUTPUTSTREAM", "SendSedentaryEvent: COULD NOT WRITE TO URL");
+
+                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK){
+                        Log.i("CONNECTION", "SendSedentaryEvent: CONNECTION ESTABLISHED");
+
+                        try (OutputStream os = connection.getOutputStream()){
+                            byte[] input = body.getBytes("utf-8");
+                            os.write(input, 0, input.length);
+                        } catch (Exception e){
+                            Log.i("OUTPUTSTREAM", "SendSedentaryEvent: COULD NOT WRITE TO URL");
+                        }
+
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                        String line;
+                        StringBuilder sb = new StringBuilder();
+                        while ((line = reader.readLine()) != null){
+                            sb.append(line.trim());
+                        }
+                        reader.close();
+                        connection.disconnect();
+                        Log.i("RESPONSE", "response: " + sb.toString());
+                        output[0] = sb.toString();
+                    } else{
+                        Log.i("CONNECTION", "SendSedentaryEvent: CONNECTION NOT ESTABLISHED");
+                        output[0] = null;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    output[0] = null;
                 }
-
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                String line;
-                StringBuilder sb = new StringBuilder();
-                while ((line = reader.readLine()) != null){
-                    sb.append(line.trim());
-                }
-                reader.close();
-                connection.disconnect();
-                Log.i("RESPONSE", "response: " + sb.toString());
-                return sb.toString();
-            } else{
-                Log.i("CONNECTION", "SendSedentaryEvent: CONNECTION NOT ESTABLISHED");
-                return null;
             }
-        } catch (Exception e) {
+        };
+
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
             e.printStackTrace();
-            return null;
         }
+        return output[0];
+
     }
 
 

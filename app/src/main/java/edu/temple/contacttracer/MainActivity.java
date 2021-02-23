@@ -68,22 +68,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         updateUUID();
         logDatabase();
 
-        FirebaseMessagingService firebaseMessagingService = new FirebaseMessagingService(){
-            @Override
-            public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
-                payload = remoteMessage.getData().get("payload");
-                Log.i("PAYLOAD", "onMessageReceived: " + payload);
-                super.onMessageReceived(remoteMessage);
-            }
-        };
 
-        FirebaseMessaging.getInstance().subscribeToTopic("TRACKING").addOnCompleteListener(new OnCompleteListener<Void>() {
-            @Override
-            public void onComplete(@NonNull  Task<Void> task) {
-                String msg = task.isSuccessful()? "success": "failed";
-                Log.d("subscribeMessage", msg);
-            }
-        });
 
     }
 
@@ -149,7 +134,24 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     public static List<ContactUUIDModel> getContactModelList(Context context){
         AppDatabase db = Room.databaseBuilder(context, AppDatabase.class, "uuid-database").build();
-        return db.contactUUIDDao().getAll();
+        final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
+        final List<ContactUUIDModel>[] contactUUIDModelList = new List[]{new ArrayList<>()};
+        Thread thread = new Thread(){
+
+            @Override
+            public void run() {
+                super.run();
+                contactUUIDModelList[0] = contactUUIDDao.getAll();
+            }
+        };
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return contactUUIDModelList[0];
     }
 
     /**

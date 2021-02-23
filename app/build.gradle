@@ -6,7 +6,7 @@ android {
     buildToolsVersion "30.0.2"
 
     defaultConfig {
-        applicationId "temple.edu.contacttracingapp"
+        applicationId "edu.temple.contacttracer"
         minSdkVersion 29
         targetSdkVersion 30
         versionCode 1
