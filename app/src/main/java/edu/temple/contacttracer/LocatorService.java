@@ -51,7 +51,9 @@ public class LocatorService extends Service {
     /**
      *
      * TODO:
-     *      1. handle payload by checking if distance is greater than 6 feet, and that it is not your own uuid
+     *      1. change time to milliseconds
+     *      2. filter own uuid
+     *      3. store locally
      */
 
     @Nullable
@@ -120,14 +122,6 @@ public class LocatorService extends Service {
         };
 
 
-        FirebaseMessagingService firebaseMessagingService = new FirebaseMessagingService(){
-            @Override
-            public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
-                payload = remoteMessage.getData().get("payload");
-                Log.i("PAYLOAD", "onMessageReceived: " + payload);
-                super.onMessageReceived(remoteMessage);
-            }
-        };
 
         FirebaseMessaging.getInstance().subscribeToTopic("TRACKING").addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
@@ -215,7 +209,7 @@ public class LocatorService extends Service {
                 super.run();
 
                 try {
-                   
+
                     RequestBody formBody = new FormBody.Builder()
                             .add("uuid", uuid)
                             .add("latitude", lat)
