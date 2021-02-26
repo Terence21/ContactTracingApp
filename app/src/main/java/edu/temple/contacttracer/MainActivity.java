@@ -26,11 +26,6 @@ import java.util.*;
 
 // need to check that the primary key doesn't exist already before trying to add it to the table
 
-/**
- * 1. get size
- * 2. if last value is equal to the same date... then skip
- * 3. if not, create an instance and add it to the table
- */
 
 public class MainActivity extends AppCompatActivity implements DashboardFragment.ActivateServiceInterface {
 

@@ -52,7 +52,7 @@ public class LocatorService extends Service {
      *
      * TODO:
      *      1. change time to milliseconds
-     *      2. filter own uuid
+     *      2. filter own uuid and check for 6 foot distance
      *      3. store locally
      */
 
@@ -70,7 +70,7 @@ public class LocatorService extends Service {
         isCountdown = false;
         locationManager = getSystemService(LocationManager.class);
 
-        final CountDownTimer countDownTimer = new CountDownTimer(60000, 1000) {
+        final CountDownTimer countDownTimer = new CountDownTimer(10000, 1000) {
             @Override
             public void onTick(long l) {
                 isCountdown = true;
@@ -83,7 +83,7 @@ public class LocatorService extends Service {
             public void onFinish() {
                 Log.d("stationaryTimer", "YOU HAVE STAYED IN A NEW LOCATION FOR MORE THAN 60 SECONDS");
                 isCountdown = false;
-                end = Calendar.getInstance().getTime().toString();
+                end = String.valueOf(Calendar.getInstance().getTimeInMillis());
 
                 List <ContactUUIDModel> contactUUIDModelList = MainActivity.getContactModelList(getApplicationContext());
                 if (contactUUIDModelList.size() > 0) {
@@ -115,7 +115,7 @@ public class LocatorService extends Service {
                     Log.i("longitude", "onLocationChanged: " + longitude);
 
                     countDownTimer.start();
-                    begin = Calendar.getInstance().getTime().toString();
+                    begin = String.valueOf(Calendar.getInstance().getTimeInMillis());
                     prevLocation = location;
                 }
             }
