@@ -3,9 +3,10 @@ package edu.temple.contacttracer;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import androidx.annotation.NonNull;
+import edu.temple.contacttracer.database.ContactUUIDModel;
 import org.jetbrains.annotations.NotNull;
 
-public class PayloadModel {
+public class PayloadModel{
     private String uuid;
     private String latitude;
     private String longitude;
@@ -13,6 +14,7 @@ public class PayloadModel {
     private String getSedentary_end;
 
     public PayloadModel(String uuid, String latitude, String longitude, String sedentary_begin, String getSedentary_end) {
+
         this.uuid = uuid;
         this.latitude = latitude;
         this.longitude = longitude;

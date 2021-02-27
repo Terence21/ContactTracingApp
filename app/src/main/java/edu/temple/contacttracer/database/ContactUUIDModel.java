@@ -3,6 +3,7 @@ package edu.temple.contacttracer.database;
 import androidx.annotation.NonNull;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 /**
@@ -11,33 +12,49 @@ import androidx.room.PrimaryKey;
 @Entity
 public class ContactUUIDModel{
 
-    public ContactUUIDModel(int index, String uuid, int year, int month, int day){
-        this.index = index;
+    public ContactUUIDModel(@NonNull String uuid, float latitude, float longitude, float sedentary_begin, float sedentary_end, boolean isLocal) {
         this.uuid = uuid;
-        this.year = year;
-        this.month = month;
-        this.day = day;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.sedentary_begin = sedentary_begin;
+        this.sedentary_end = sedentary_end;
+        this.isLocal = isLocal;
+
     }
 
-    @ColumnInfo(name = "index")
-    public int index;
+    @Ignore
+    public ContactUUIDModel(@NonNull String uuid, float sedentary_end, boolean isLocal){
+        this.uuid = uuid;
+        this.isLocal = isLocal;
+        this.sedentary_end = sedentary_end;
+    }
+
+
+    @PrimaryKey(autoGenerate = true)
+    public int id = 0;
 
     @NonNull
-    @PrimaryKey
     public String uuid;
 
-    @ColumnInfo(name="year")
-    public int year;
+    @ColumnInfo(name = "latitude")
+    public float latitude;
 
-    @ColumnInfo(name="month")
-    public int month;
+    @ColumnInfo(name = "longitude")
+    public float longitude;
 
-    @ColumnInfo(name="day")
-    public int day;
+
+    @ColumnInfo(name = "sedentary_begin")
+    public float sedentary_begin;
+
+    @ColumnInfo(name = "sedentary_end")
+    public float sedentary_end;
+
+    @ColumnInfo(name = "isLocal")
+    public boolean isLocal;
 
     @NonNull
     @Override
     public String toString() {
-        return index + ": " + uuid + " " + month + "/" + day + "/" + year;
+        return uuid + ": \tlat: " + latitude + "\tlong: " + longitude + "\tsed_begin: " + sedentary_begin + "\tsed_end: " + sedentary_end;
     }
 }

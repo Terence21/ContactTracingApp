@@ -16,13 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.room.Ignore;
 import androidx.room.Room;
-import androidx.room.RoomDatabase;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingService;
-import com.google.firebase.messaging.RemoteMessage;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import edu.temple.contacttracer.database.AppDatabase;
@@ -40,11 +35,10 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     FragmentManager fm;
     DashboardFragment dashboardFragment;
 
-    ArrayList<ContactUUIDModel> contactUUIDModelArrayList;
-
-    private static final int DB_SIZE_LIMIT = 14;
-
     private String payload;
+
+    AppDatabase db;
+    ContactUUIDDao contactUUIDDao;
 
     /**
      * Check if application has GPS permissions, if not request them
@@ -58,21 +52,11 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        locationManager = getSystemService(LocationManager.class);
-
-        locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(@NonNull Location location) {
-                currentLocation = location;
-            }
-        };
-
         if (!hasGPSPermission()) {
             requestGPSPermission();
         }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 1, locationListener);
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 1, locationListener);
-        locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 0, 1, locationListener);
+
+
 
         fm = getSupportFragmentManager();
 
@@ -83,10 +67,12 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
                 .addToBackStack(null)
                 .commit();
 
+        db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
+        contactUUIDDao = db.contactUUIDDao();
         updateUUID();
         logDatabase();
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("FMS"));
+
 
     }
 
@@ -96,46 +82,17 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
      * check that the DB does not contain 14 entries, if so.. treat as a queue and remove the first in
      */
     public void updateUUID() {
-        AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
-        final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
-
+        removeOverdueUUIDs();
 
         Thread thread = new Thread() {
 
 
             @Override
             public void run() {
-
-                Calendar calendar = Calendar.getInstance();
-                int year = calendar.get(Calendar.YEAR);
-                int month = calendar.get(Calendar.MONTH) + 1;
-                int day = calendar.get(Calendar.DAY_OF_MONTH);
-
-                ContactUUIDModel previousUUID = contactUUIDDao.getContactUUIDModel(0);
-                Log.i("calendar", "Today: " + month + "/" + day + "/" + year);
-                if (previousUUID != null) {
-
-                    // only update if the day has changed from it's last launch
-                    if (previousUUID.month == month && previousUUID.year == year && previousUUID.day == day) {
-                        Log.i("Database", "DatabaseOperation: " + "insertion incomplete");
-                    } else {
-                        int size = contactUUIDDao.getSize();
-                        if (size == DB_SIZE_LIMIT) {
-                            // delete from the end of the table... where index 13 is the last
-                            contactUUIDDao.delete(DB_SIZE_LIMIT - 1);
-                        }
-                        contactUUIDDao.incrementIndex();
-                        String uuid = UUID.randomUUID().toString();
-                        final ContactUUIDModel contactUUIDModel = new ContactUUIDModel(0, uuid, year, month, day);
-
-                        contactUUIDDao.insert(contactUUIDModel);
-                        Log.i("Database", "DatabaseOperation: " + "insertion complete");
-                    }
-                } else {
+                if (contactUUIDDao.shouldGeneratedID(Calendar.getInstance().getTimeInMillis()) == 0){
                     String uuid = UUID.randomUUID().toString();
-                    final ContactUUIDModel contactUUIDModel = new ContactUUIDModel(0, uuid, year, month, day);
+                    ContactUUIDModel contactUUIDModel = new ContactUUIDModel(uuid, Calendar.getInstance().getTimeInMillis(), true);
                     contactUUIDDao.insert(contactUUIDModel);
-                    Log.i("Database", "DatabaseOperation: " + "first insertion complete");
                 }
             }
         };
@@ -146,13 +103,14 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        db.close();
+
 
     }
 
     public static List<ContactUUIDModel> getContactModelList(Context context) {
         AppDatabase db = Room.databaseBuilder(context, AppDatabase.class, "uuid-database").build();
         final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
+
         final List<ContactUUIDModel>[] contactUUIDModelList = new List[]{new ArrayList<>()};
         Thread thread = new Thread() {
 
@@ -173,25 +131,14 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     }
 
     /**
-     * Reset Database back to size 0 for testing
+     * Delete all uuid over 14 days from current time
      */
-    public void resetDatabase() {
-        AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
-        final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
+    public void removeOverdueUUIDs() {
 
         Thread thread = new Thread() {
-
-
             @Override
             public void run() {
-                contactUUIDModelArrayList = (ArrayList<ContactUUIDModel>) contactUUIDDao.getAll();
-                if (contactUUIDModelArrayList != null) {
-                    if (contactUUIDModelArrayList.size() > 0) {
-                        for (ContactUUIDModel contactUUIDModel : contactUUIDModelArrayList) {
-                            contactUUIDDao.delete(contactUUIDModel.index);
-                        }
-                    }
-                }
+                contactUUIDDao.deleteOverdue(Calendar.getInstance().getTimeInMillis());
             }
 
         };
@@ -202,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        db.close();
+
     }
 
     /**
@@ -210,17 +157,14 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
      */
     public void logDatabase() {
 
-        AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
-        final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
-
         Thread thread = new Thread() {
             @Override
             public void run() {
-                String database = "";
+                StringBuilder database = new StringBuilder();
                 ArrayList<ContactUUIDModel> contactUUIDModelArrayList = (ArrayList<ContactUUIDModel>) contactUUIDDao.getAll();
 
                 for (ContactUUIDModel contactUUIDModel : contactUUIDModelArrayList) {
-                    database += contactUUIDModel.toString() + "\n";
+                    database.append(contactUUIDModel.toString()).append("\n");
                 }
                 Log.i("logdb", "logDatabase: \n" + database);
             }
@@ -231,8 +175,14 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        db.close();
 
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        db.close();
     }
 
     /**
@@ -284,89 +234,5 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     }
 
 
-    private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            payload = intent.getStringExtra("payload");
-            boolean isFilteredPayload = isGrater6Feet_differentUUID(payload);
-            Log.i("filter", "onReceive: " + isFilteredPayload);
-        }
-    };
-
-    @Override
-    protected void onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver);
-        super.onDestroy();
-    }
-
-    LocationManager locationManager;
-    LocationListener locationListener;
-    Location currentLocation;
-
-    public void storePayload(PayloadModel payloadModel){
-        
-    }
-
-    public boolean isGrater6Feet_differentUUID(String payload) {
-
-        final PayloadModel payloadModel = generatePayloadModel(payload);
-
-        Location location = new Location("");
-        double latitude = Double.parseDouble(payloadModel.getLatitude());
-        double longitude = Double.parseDouble(payloadModel.getLongitude());
-        Log.i("locationCheck", "latitude: " + currentLocation.getLatitude() + "\nlongitude: " + currentLocation.getLongitude());
-        location.setLatitude(latitude);
-        location.setLongitude(longitude);
-
-        // check if database contains uuid
-        final boolean[] containsUUID = {true};
-        Thread thread = new Thread() {
-            @Override
-            public void run() {
-                super.run();
-                List<ContactUUIDModel> contactUUIDModelList = MainActivity.getContactModelList(getApplicationContext());
-                assert contactUUIDModelList != null;
-                for (ContactUUIDModel model : contactUUIDModelList) {
-                    if (model.uuid.equals(payloadModel.getUuid())) {
-                        break;
-                    }
-                    containsUUID[0] = false;
-                }
-            }
-        };
-
-        thread.start();
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return false;
-        }
-
-        // check distance between current location and payload location
-        float[] results = new float[1];
-        Log.i("Filter", "containsUUID: " + Arrays.toString(containsUUID) + " distance: " + results[0]);
-        Location.distanceBetween(latitude, longitude, currentLocation.getLatitude(), currentLocation.getLongitude(), results);
-
-        return results[0] >= 1.8288 && containsUUID[0] == false;
-    }
-
-    private PayloadModel generatePayloadModel(String payload){
-
-        try {
-            JsonObject payloadObject = new JsonParser().parse(payload).getAsJsonObject();
-            String uuid = payloadObject.get("uuid").getAsString();
-            String latitude = payloadObject.get("latitude").getAsString();
-            String longitude = payloadObject.get("longitude").getAsString();
-            String sedentary_begin = payloadObject.get("sedentary_begin").getAsString();
-            String sedentary_end = payloadObject.get("sedentary_end").getAsString();
-            PayloadModel model = new PayloadModel(uuid, latitude, longitude, sedentary_begin, sedentary_end);
-            Log.i("PAYLOADMODEL", "generatePayloadModel: " + model.toString());
-            return model;
-        } catch(Exception e){
-            e.printStackTrace();
-            return null;
-        }
-    }
 }
 

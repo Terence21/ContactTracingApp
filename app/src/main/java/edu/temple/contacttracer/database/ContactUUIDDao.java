@@ -16,23 +16,27 @@ public interface ContactUUIDDao {
     @Query("SELECT * FROM ContactUUIDModel")
     List<ContactUUIDModel> getAll();
 
-    @Query("SELECT * FROM ContactUUIDModel WHERE `index` = :place")
-    ContactUUIDModel getContactUUIDModel(int place);
+    // 1 day = 86400000 milliseconds
+    @Query("SELECT COUNT(`uuid`) FROM CONTACTUUIDMODEL WHERE isLocal = 1 AND Abs(:time - sedentary_end) <= 86400000")
+    int shouldGeneratedID(long time);
+
+    // fix this function
+    @Query("SELECT * FROM CONTACTUUIDMODEL WHERE isLocal = 1 AND Abs(:time - sedentary_end) <= 86400000")
+    ContactUUIDModel getSameDayUUID(long time);
+
+    @Query("SELECT * FROM ContactUUIDModel WHERE `uuid` = :uuid")
+    ContactUUIDModel getContactUUIDModel(String uuid);
 
     @Insert
     void insert(ContactUUIDModel contactUUIDModel);
 
-    // FIX: can't currently use because of primary key
-    @Query("UPDATE contactuuidmodel SET uuid = :u, year = :y, month = :m, day = :d WHERE `index` = :i")
-    void replace(int i, String u, int y, int m, int d);
 
-    @Query("SELECT COUNT(`index`) FROM CONTACTUUIDMODEL")
+    @Query("SELECT COUNT(`uuid`) FROM CONTACTUUIDMODEL")
     int getSize();
 
-    @Query("UPDATE contactuuidmodel SET `index` = `index` + 1 WHERE `index` > -1")
-    void incrementIndex();
 
-    @Query("DELETE FROM contactuuidmodel WHERE `index` = :index")
-    void delete(int index);
+    // 14 days = 1209600000 milliseconds
+    @Query("DELETE FROM contactuuidmodel WHERE Abs(:time - sedentary_end) >= 1209600000")
+    void deleteOverdue(long time);
 
 }
