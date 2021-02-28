@@ -1,4 +1,4 @@
-package temple.edu.contacttracingapp;
+package edu.temple.contacttracer;
 
 import org.junit.Test;
 
