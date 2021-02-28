@@ -1,13 +1,18 @@
 package edu.temple.contacttracer;
 
 import android.content.Context;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import com.google.android.material.button.MaterialButton;
+
+import java.util.Objects;
 
 
 public class DashboardFragment extends Fragment {
@@ -50,8 +55,13 @@ public class DashboardFragment extends Fragment {
                 int id = view.getId();
                 switch (id){
                     case R.id._startButton:
-
-                        listener.startLocatorService();
+                        LocationManager locationManager = Objects.requireNonNull(getActivity()).getSystemService(LocationManager.class);
+                        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                            listener.startLocatorService();
+                        } else{
+                            Toast.makeText(getContext(), "ENABLE LOCATION", Toast.LENGTH_SHORT);
+                            Log.i("LOCATION ENABLE", "onClick: ENABLE LOCATION PROVIDER");
+                        }
                         break;
                     case R.id._stopButton:
                         // when stopped it loses foreground notification privileges.... should fix?

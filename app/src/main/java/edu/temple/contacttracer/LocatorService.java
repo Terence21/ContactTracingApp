@@ -12,6 +12,7 @@ import android.location.LocationManager;
 import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -54,16 +55,6 @@ public class LocatorService extends Service {
     Location prevLocation;
     boolean isCountdown;
 
-
-
-    /**
-     *
-     * TODO:
-     *      1. change time to milliseconds
-     *      2. filter own uuid and check for 6 foot distance
-     *      3. store locally
-     */
-
     AppDatabase db;
     ContactUUIDDao contactUUIDDao;
     @Nullable
@@ -72,7 +63,7 @@ public class LocatorService extends Service {
         return null;
     }
 
-
+    boolean canRun;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -82,14 +73,15 @@ public class LocatorService extends Service {
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("FMS"));
         AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
         final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
-        final CountDownTimer countDownTimer = new CountDownTimer(10000, 1000) {
+        final CountDownTimer countDownTimer = new CountDownTimer(60000, 1000) {
             @Override
             public void onTick(long l) {
                 isCountdown = true;
             }
 
             /**
-             * create a Debug warning if the timer reaches 60 seconds...
+             * on sedentary_end create a UUID model and store the instance as local to the database
+             * broadcasting the model fields to other registered devices
              */
             @Override
             public void onFinish() {
@@ -104,6 +96,8 @@ public class LocatorService extends Service {
                     @Override
                     public void run() {
                         super.run();
+
+                        // there should always be an existing uuid for day before sedentary event, if not.. make one
                         if (contactUUIDDao.shouldGeneratedID(Calendar.getInstance().getTimeInMillis()) == 0){
                             Log.i("db size", "run: smaller than 1");
                             contactUUIDDao.insert(contactUUIDModel[0]);
@@ -154,7 +148,7 @@ public class LocatorService extends Service {
         };
 
 
-
+        // subscribe to firebase messaging TRACKING topic
         FirebaseMessaging.getInstance().subscribeToTopic("TRACKING").addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
@@ -168,14 +162,23 @@ public class LocatorService extends Service {
 
     }
 
+    // request location updates
     // https://stackoverflow.com/questions/51587863/bad-notification-for-start-foreground-invalid-channel-for-service-notification
     @SuppressLint("MissingPermission")
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 1, locationListener);
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 1, locationListener);
-        locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 0, 1, locationListener);
+        try {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 1, locationListener);
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 1, locationListener);
+            locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 0, 1, locationListener);
+            canRun = true;
+
+        } catch (Exception e){
+            Toast toast = Toast.makeText(getApplicationContext(), "ENABLE NETWORK", Toast.LENGTH_SHORT);
+            toast.show();
+
+        }
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -188,6 +191,9 @@ public class LocatorService extends Service {
         locationManager.removeUpdates(locationListener);
     }
 
+    /**
+     * create notification channel and start foreground service
+     */
     public void showNotification(){
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
@@ -223,6 +229,15 @@ public class LocatorService extends Service {
     private String sedentary_begin;
     private String sedentary_end;
 
+    /**
+     *
+     * @param uid
+     * @param latitude
+     * @param longitude
+     * @param sed_begin
+     * @param sed_end
+     * @return response from server
+     */
     public String sendSedentaryEvent(String uid, final String latitude, final String longitude, String sed_begin, final String sed_end){
         uuid = uid;
         this.lat = latitude;
@@ -283,7 +298,11 @@ public class LocatorService extends Service {
 
     }
 
-
+    /**
+     * broadcast receiver to receive payload from Firebase messaging service
+     * receive  payload string, generate Payload model from string, then filter payload for different uuid and less than 6 feet distance
+     * if passes filter then store payload model in database
+     */
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -301,8 +320,8 @@ public class LocatorService extends Service {
         }
     };
 
+    // log database
     public void logDatabase() {
-
         Thread thread = new Thread() {
             @Override
             public void run() {
@@ -325,7 +344,7 @@ public class LocatorService extends Service {
 
     }
 
-
+    // store payload model in database
     public void storePayload(final PayloadModel payloadModel){
         Thread thread = new Thread(){
             @Override
@@ -347,6 +366,12 @@ public class LocatorService extends Service {
         }
     }
 
+    /**
+     *
+     * @param payloadModel
+     * @return true if uuid is not the same as device, and distance is less than 6 feet
+     * return false if payload not proper or if aforementioned condition is false
+     */
     @SuppressLint("MissingPermission")
     public boolean isGrater6Feet_differentUUID(final PayloadModel payloadModel) {
 
@@ -397,6 +422,7 @@ public class LocatorService extends Service {
         return false;
     }
 
+    // convert payload string to payload model
     private PayloadModel generatePayloadModel(String payload){
 
         try {

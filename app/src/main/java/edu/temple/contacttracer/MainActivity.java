@@ -78,8 +78,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     /**
      * Using Android Room to access SQLITE
-     * compare the most recent date to the current date... if the same day do not add UUID
-     * check that the DB does not contain 14 entries, if so.. treat as a queue and remove the first in
+     * When called, add new ContactUUIDModel to the database
      */
     public void updateUUID() {
         removeOverdueUUIDs();
@@ -107,6 +106,11 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     }
 
+    /**
+     * generate an arraylist of all the entities in the database
+     * @param context calling application
+     * @return arraylist representation of database entries
+     */
     public static List<ContactUUIDModel> getContactModelList(Context context) {
         AppDatabase db = Room.databaseBuilder(context, AppDatabase.class, "uuid-database").build();
         final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
@@ -131,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     }
 
     /**
-     * Delete all uuid over 14 days from current time
+     * Delete all uuid over 14 days from current time... using DAO method
      */
     public void removeOverdueUUIDs() {
 
@@ -179,10 +183,13 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     }
 
+    /**
+     * destroy instance of database on application
+     */
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        db.close();
+        // db.close();
     }
 
     /**

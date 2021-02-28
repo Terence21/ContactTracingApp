@@ -11,6 +11,10 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import org.jetbrains.annotations.NotNull;
 
+
+/**
+ * Singleton service implemented by OS
+ */
 public class CustomFirebaseMessagingService extends FirebaseMessagingService {
 
     String payload;
@@ -28,7 +32,10 @@ public class CustomFirebaseMessagingService extends FirebaseMessagingService {
     }
 
 
-
+    /**
+     * extract json string from remote message and send to locator service
+     * @param remoteMessage payload
+     */
     @SuppressLint("MissingPermission")
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
