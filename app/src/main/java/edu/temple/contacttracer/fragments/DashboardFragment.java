@@ -1,4 +1,4 @@
-package edu.temple.contacttracer;
+package edu.temple.contacttracer.fragments;
 
 import android.content.Context;
 import android.location.LocationManager;
@@ -11,7 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.datepicker.MaterialDatePicker;
+import edu.temple.contacttracer.R;
 
 import java.util.Objects;
 

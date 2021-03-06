@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey;
 @Entity
 public class ContactUUIDModel{
 
-    public ContactUUIDModel(@NonNull String uuid, float latitude, float longitude, float sedentary_begin, float sedentary_end, boolean isLocal) {
+    public ContactUUIDModel(@NonNull String uuid, double latitude, double longitude, long sedentary_begin, long sedentary_end, boolean isLocal) {
         this.uuid = uuid;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -23,7 +23,7 @@ public class ContactUUIDModel{
     }
 
     @Ignore
-    public ContactUUIDModel(@NonNull String uuid, float sedentary_end, boolean isLocal){
+    public ContactUUIDModel(@NonNull String uuid, long sedentary_end, boolean isLocal){
         this.uuid = uuid;
         this.isLocal = isLocal;
         this.sedentary_end = sedentary_end;
@@ -37,17 +37,17 @@ public class ContactUUIDModel{
     public String uuid;
 
     @ColumnInfo(name = "latitude")
-    public float latitude;
+    public double latitude;
 
     @ColumnInfo(name = "longitude")
-    public float longitude;
+    public double longitude;
 
 
     @ColumnInfo(name = "sedentary_begin")
-    public float sedentary_begin;
+    public long sedentary_begin;
 
     @ColumnInfo(name = "sedentary_end")
-    public float sedentary_end;
+    public long sedentary_end;
 
     @ColumnInfo(name = "isLocal")
     public boolean isLocal;

@@ -1,4 +1,4 @@
-package edu.temple.contacttracer;
+package edu.temple.contacttracer.services;
 
 import android.Manifest;
 import android.annotation.SuppressLint;

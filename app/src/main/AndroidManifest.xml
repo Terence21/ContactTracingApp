@@ -13,17 +13,17 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/Theme.MaterialComponents.Light">
-        <activity android:name="edu.temple.contacttracer.MainActivity">
+        <activity android:name="edu.temple.contacttracer.MainActivity" android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
         <service
-                android:name="edu.temple.contacttracer.LocatorService"
+                android:name="edu.temple.contacttracer.services.LocatorService"
                 android:foregroundServiceType="location" >
         </service>
-        <service android:name=".CustomFirebaseMessagingService"
+        <service android:name=".services.CustomFirebaseMessagingService"
                  android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

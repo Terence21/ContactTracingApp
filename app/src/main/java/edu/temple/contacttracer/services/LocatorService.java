@@ -1,4 +1,4 @@
-package edu.temple.contacttracer;
+package edu.temple.contacttracer.services;
 
 import android.annotation.SuppressLint;
 import android.app.*;
@@ -23,6 +23,8 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import edu.temple.contacttracer.MainActivity;
+import edu.temple.contacttracer.R;
 import edu.temple.contacttracer.database.AppDatabase;
 import edu.temple.contacttracer.database.ContactUUIDDao;
 import edu.temple.contacttracer.database.ContactUUIDModel;
@@ -224,7 +226,28 @@ public class LocatorService extends Service {
                     .setCategory(Notification.CATEGORY_SERVICE)
                     .build();
             startForeground(2, notification);
-        } else if (notificationID == NotificationID.CONTACT_NOTIFICATION){
+        }
+
+    }
+
+    public void showNotification(NotificationID notificationID, ContactUUIDModel contactUUIDModel){
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.setAction("TraceFragment");
+        notificationIntent.putExtra("latitidue", contactUUIDModel.latitude);
+        notificationIntent.putExtra("longitude", contactUUIDModel.longitude);
+        notificationIntent.putExtra("date", contactUUIDModel.sedentary_end);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+
+        String channelID = "default";
+        String channelName = "Foreground Service Channel";
+        NotificationChannel notificationChannel = new NotificationChannel(channelID, channelName, NotificationManager.IMPORTANCE_NONE);
+
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        manager.createNotificationChannel(notificationChannel);
+
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, channelID);
+        if (notificationID == NotificationID.CONTACT_NOTIFICATION){
             Notification notification = notificationBuilder.setOngoing(true)
                     .setContentTitle("COVID CONTACT MADE")
                     .setContentText("you have recently made contact with someone who has confirmed COVID contraction")
@@ -235,9 +258,8 @@ public class LocatorService extends Service {
                     .setCategory(Notification.CATEGORY_SERVICE)
                     .build();
             startForeground(3, notification);
+
         }
-
-
     }
 
 
@@ -333,16 +355,16 @@ public class LocatorService extends Service {
 
                         TracingModel tracingModel = generateTracingModel(payload);
                         Log.i("receive tracking payload", "onReceive: " + payload);
-
+                        notifyCovidContact(tracingModel);
                         //if the received model
-                        boolean isLocalReport = containsLocalTracing(tracingModel);
+                       /* boolean isLocalReport = containsLocalTracing(tracingModel);
                         if (!isLocalReport){
                             Log.i("TRACING PAYLOAD", "onReceive: received new filtered tracing payload");
                             notifyCovidContact(tracingModel);
 
                         }else{
                             Log.i("TRACING PAYLOAD", "onReceive " + "cannot add payload same uuid");
-                        }
+                        }*/
                         break;
                     case "tracking":
                         payload = intent.getStringExtra("tracking");
@@ -560,7 +582,7 @@ public class LocatorService extends Service {
     }
 
     public boolean containsLocalTracing(final TracingModel tracingModel){
-        final boolean[] doesContain = {false};
+        final boolean[] doesContain = {true};
         Thread thread = new Thread(){
             @Override
             public void run() {
@@ -569,8 +591,8 @@ public class LocatorService extends Service {
                 contactUUIDDao = db.contactUUIDDao();
                 ArrayList<ContactUUIDModel> contactUUIDModels = (ArrayList<ContactUUIDModel>) contactUUIDDao.getAllLocal();
                 for (ContactUUIDModel model : contactUUIDModels){
-                    if (tracingModel.getUuids().contains(model.uuid)) {
-                        doesContain[0] = true;
+                    if (tracingModel.getUuids().contains(model.uuid) && model.isLocal) {
+                        doesContain[0] = false;
                         break;
                     }
                 }
@@ -621,10 +643,15 @@ public class LocatorService extends Service {
         ContactUUIDModel madeContactModel = getCovidContactModel(tracingModel);
         if (madeContactModel != null){
             Log.i("CONTACT_NOTIFICATION", "notifyCovidContact: SENT NOTIFICATION");
-            showNotification(NotificationID.CONTACT_NOTIFICATION);
+            showNotification(NotificationID.CONTACT_NOTIFICATION, madeContactModel);
             // call up map fragment to show location and time of content
+            Intent intent = new Intent("TraceFragment");
+            intent.putExtra("latitude", madeContactModel.latitude);
+            intent.putExtra("longitude", madeContactModel.longitude);
+            intent.putExtra("date", madeContactModel.sedentary_end);
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
         } else{
-            Log.i("CONTACT_NOTIFICATION", "notifyCovidContact: NOT SENT NOTIFICATION, NO CONTACT MADE");
+            Log.i("CONTACT_NOTIFICATION", "notifyCovidContact: NOT SENT NOTIFICATION, NO CONTACT MADE OR SAME UUID");
         }
     }
 

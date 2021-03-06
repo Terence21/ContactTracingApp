@@ -2,22 +2,25 @@ package edu.temple.contacttracer;
 
 import android.Manifest;
 import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.room.Ignore;
 import androidx.room.Room;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
 import edu.temple.contacttracer.database.AppDatabase;
 import edu.temple.contacttracer.database.ContactUUIDDao;
 import edu.temple.contacttracer.database.ContactUUIDModel;
-import edu.temple.contacttracer.models.TracingModel;
+import edu.temple.contacttracer.fragments.DashboardFragment;
+import edu.temple.contacttracer.fragments.TraceFragment;
+import edu.temple.contacttracer.services.LocatorService;
 
 import java.util.*;
 
@@ -29,6 +32,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     FragmentManager fm;
     DashboardFragment dashboardFragment;
+    TraceFragment traceFragment;
 
     private String payload;
 
@@ -46,12 +50,18 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        isVisible = true;
+
+        Intent callingIntent = getIntent();
+        if (callingIntent != null){
+
+        }
 
         if (!hasGPSPermission()) {
             requestGPSPermission();
         }
 
-
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("TraceFragment"));
 
         fm = getSupportFragmentManager();
 
@@ -69,6 +79,13 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
 
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isVisible = true;
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("TraceFragment"));
     }
 
     /**
@@ -345,6 +362,48 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         intent.putExtra("date", date_long);
         intent.putExtra("uuids", uuids);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.i("isVisible", "isVisible: " + isVisible);
+            if (isVisible) {
+                if (intent.getAction().equals("TraceFragment")) {
+                    double latitude = 0, longitude = 0;
+                    long date = 0;
+                    latitude = intent.getDoubleExtra("latitude", latitude);
+                    longitude = intent.getDoubleExtra("longitude", longitude);
+                    date = intent.getLongExtra("date", date);
+                    TraceFragment traceFragment = TraceFragment.newInstance(date, latitude, longitude);
+                    fm.beginTransaction()
+                            .replace(R.id._mainFragmentFrame, traceFragment, "tf")
+                            .addToBackStack(null)
+                            .commit();
+
+                }
+            }
+        }
+    };
+
+    private boolean isVisible;
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isVisible = false;
+    }
+
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        if (intent.getAction().equals("TraceFragment")){
+            Log.i("TraceFragment action", "onNewIntent: traceFragment notificationIntent");
+            isVisible = true;
+            broadcastReceiver.onReceive(this, intent);
+        }
+
     }
 }
 
