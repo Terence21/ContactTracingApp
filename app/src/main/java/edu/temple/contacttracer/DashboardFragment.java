@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.datepicker.MaterialDatePicker;
 
 import java.util.Objects;
 
@@ -19,6 +20,7 @@ public class DashboardFragment extends Fragment {
 
     MaterialButton startButton;
     MaterialButton stopButton;
+    MaterialButton dateButton;
     ActivateServiceInterface listener;
 
     public DashboardFragment() {
@@ -48,6 +50,7 @@ public class DashboardFragment extends Fragment {
 
         startButton = view.findViewById(R.id._startButton);
         stopButton = view.findViewById(R.id._stopButton);
+        dateButton = view.findViewById(R.id._dateButton);
 
         View.OnClickListener ocl = new View.OnClickListener() {
             @Override
@@ -67,12 +70,16 @@ public class DashboardFragment extends Fragment {
                         // when stopped it loses foreground notification privileges.... should fix?
                         listener.stopLocatorService();
                         break;
+                    case R.id._dateButton:
+                        listener.showCalendar();
+                        break;
                 }
             }
         };
 
         startButton.setOnClickListener(ocl);
         stopButton.setOnClickListener(ocl);
+        dateButton.setOnClickListener(ocl);
 
         return view;
     }
@@ -92,6 +99,7 @@ public class DashboardFragment extends Fragment {
     public interface ActivateServiceInterface{
         public void startLocatorService();
         public void stopLocatorService();
+        public void showCalendar();
     }
 
 }

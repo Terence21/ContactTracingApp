@@ -2,24 +2,16 @@ package edu.temple.contacttracer;
 
 import android.Manifest;
 import android.app.ActivityManager;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.util.Log;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.room.Ignore;
 import androidx.room.Room;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
 import edu.temple.contacttracer.database.AppDatabase;
 import edu.temple.contacttracer.database.ContactUUIDDao;
 import edu.temple.contacttracer.database.ContactUUIDModel;
@@ -240,6 +232,22 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         Log.i("LocatorService", "Stopping LocatorService ");
     }
 
+    private String selectedDate;
+    @Override
+    public void showCalendar() {
+        MaterialDatePicker.Builder<Long> materialDateBuilder = MaterialDatePicker.Builder.datePicker();
+        materialDateBuilder.setTitleText("SELECT A DATE");
 
+        final MaterialDatePicker<Long> materialDatePicker = materialDateBuilder.build();
+        materialDatePicker.show(getSupportFragmentManager(), "MATERIAL_DATE_PICKER");
+
+        materialDatePicker.addOnPositiveButtonClickListener(new MaterialPickerOnPositiveButtonClickListener() {
+            @Override
+            public void onPositiveButtonClick(Object selection) {
+                selectedDate = materialDatePicker.getHeaderText();
+                Log.i("DATE", "onPositiveButtonClick: " + selectedDate);
+            }
+        });
+    }
 }
 
