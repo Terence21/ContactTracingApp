@@ -45,4 +45,7 @@ public interface ContactUUIDDao {
     @Query("DELETE FROM contactuuidmodel WHERE Abs(:time - sedentary_end) >= 1209600000")
     void deleteOverdue(long time);
 
+    @Query("SELECT * FROM ContactUUIDModel WHERE isLocal = 1 AND sedentary_begin > 0.0")
+    List<ContactUUIDModel> getPreviousDays();
+
 }

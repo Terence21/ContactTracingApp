@@ -9,6 +9,8 @@ import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.room.Ignore;
 import androidx.room.Room;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
@@ -244,10 +246,104 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         materialDatePicker.addOnPositiveButtonClickListener(new MaterialPickerOnPositiveButtonClickListener() {
             @Override
             public void onPositiveButtonClick(Object selection) {
+                Log.i("test", "onPositiveButtonClick: clicked");
                 selectedDate = materialDatePicker.getHeaderText();
-                Log.i("DATE", "onPositiveButtonClick: " + selectedDate);
+
+                alertLocatorServiceDate(selectedDate);
+
             }
         });
+    }
+
+
+    private long convertDate(String date){
+        date = date.replace(",", "");
+        date = date.trim();
+        Log.i("DATE", "onPositiveButtonClick: " + selectedDate);
+        String [] dates = date.split(" ");
+        Log.i("split", "convertDate: " + Arrays.toString(dates));
+        int month = -1;
+        switch (dates[0]){
+            case "Jan":
+                month = 1;
+                break;
+            case "Feb":
+                month = 2;
+                break;
+            case "Mar":
+                month = 3;
+                break;
+            case "Apr":
+                month = 4;
+                break;
+            case "May":
+                month = 5;
+                break;
+            case "Jun":
+                month = 6;
+                break;
+            case "Jul":
+                month = 7;
+                break;
+            case "Aug":
+                month = 8;
+                break;
+            case "Sep":
+                month = 9;
+                break;
+            case "Oct":
+                month = 10;
+                break;
+            case "Nov":
+                month = 11;
+                break;
+            case "Dec":
+                month = 12;
+                break;
+        }
+
+        int day = Integer.valueOf(dates[1]).intValue();
+        int year = Integer.valueOf(dates[2]).intValue();
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(year, month, day);
+
+        return calendar.getTimeInMillis();
+
+
+    }
+
+    private ArrayList<String> previousUUIDs(){
+        ArrayList<String> uuids = new ArrayList<>();
+        final ArrayList<ContactUUIDModel>[] previousDays = new ArrayList[]{new ArrayList<>()};
+        Thread thread = new Thread(){
+            @Override
+            public void run() {
+                super.run();
+                previousDays[0] = (ArrayList<ContactUUIDModel>) contactUUIDDao.getPreviousDays();
+            }
+        };
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        for (ContactUUIDModel day: previousDays[0]){
+            uuids.add(day.uuid);
+        }
+        return uuids;
+    }
+
+    public void alertLocatorServiceDate(String date){
+        long date_long = convertDate(date);
+        ArrayList<String> uuids = previousUUIDs();
+
+        Intent intent = new Intent("CONTACT");
+        intent.putExtra("date", date_long);
+        intent.putExtra("uuids", uuids);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 }
 

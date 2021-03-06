@@ -31,6 +31,7 @@ import edu.temple.contacttracer.models.TracingModel;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.*;
 
@@ -67,6 +68,7 @@ public class LocatorService extends Service {
         isCountdown = false;
         locationManager = getSystemService(LocationManager.class);
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("FMS"));
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("CONTACT"));
         AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
         final ContactUUIDDao contactUUIDDao = db.contactUUIDDao();
         final CountDownTimer countDownTimer = new CountDownTimer(60000, 1000) {
@@ -309,27 +311,38 @@ public class LocatorService extends Service {
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String type = intent.getStringExtra("type");
-            switch (type){
-                case "tracing":
-                    payload = intent.getStringExtra("tracing");
+            if (intent.getAction().equals("FMS")) {
 
-                    TracingModel tracingModel = generateTracingModel(payload);
-                    Log.i("receive tracking payload", "onReceive: " + payload);
-                    break;
-                case "tracking":
-                    payload = intent.getStringExtra("tracking");
-                    Log.i("receive tracing payload", "onReceive: " + payload);
-                    PayloadModel payloadModel = generatePayloadModel(payload);
-                    if (isGrater6Feet_differentUUID(payloadModel)){
-                        storePayload(payloadModel);
-                        Log.i("TRACING PAYLOAD", "onReceive " + "received new filtered payload");
-                        logDatabase();
-                    } else{
-                        Log.i("PAYLOAD", "onReceive " + "cannot add payload, either > 6 feet or same uuid");
-                    }
-                    break;
+                String type = intent.getStringExtra("type");
+                switch (type) {
+                    case "tracing":
+                        payload = intent.getStringExtra("tracing");
+
+                        TracingModel tracingModel = generateTracingModel(payload);
+                        Log.i("receive tracking payload", "onReceive: " + payload);
+                        break;
+                    case "tracking":
+                        payload = intent.getStringExtra("tracking");
+                        Log.i("receive tracing payload", "onReceive: " + payload);
+                        PayloadModel payloadModel = generatePayloadModel(payload);
+                        if (isGrater6Feet_differentUUID(payloadModel)) {
+                            storePayload(payloadModel);
+                            Log.i("TRACING PAYLOAD", "onReceive " + "received new filtered payload");
+                            logDatabase();
+                        } else {
+                            Log.i("PAYLOAD", "onReceive " + "cannot add payload, either > 6 feet or same uuid");
+                        }
+                        break;
+                }
+
+            } else if (intent.getAction().equals("CONTACT")) {
+                Log.i("contact", "onReceive: sending");
+                long date = 0;
+                date = intent.getLongExtra("date", date);
+                ArrayList<String> uuids = intent.getStringArrayListExtra("uuids");
+                sendContactEvent(date, uuids);
             }
+
 
         }
     };
@@ -467,6 +480,60 @@ public class LocatorService extends Service {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public String sendContactEvent(long d, final ArrayList<String> uuids){
+        String uuidJsonString = buildUUIDString(uuids);
+        final String date = String.valueOf(d);
+        final String[] output = {""};
+
+        Thread thread = new Thread(){
+            @Override
+            public void run() {
+                super.run();
+
+                RequestBody formBody = new FormBody.Builder()
+                        .add("date", date)
+                        .add("uuids", Arrays.toString(uuids.toArray()))
+                        .build();
+
+                Request request = new Request.Builder()
+                        .url("https://kamorris.com/lab/ct_tracing.php")
+                        .post(formBody)
+                        .build();
+
+                OkHttpClient httpClient = new OkHttpClient();
+                try (Response response = httpClient.newCall(request).execute()){
+                    output[0] = response.body().string();
+                    Log.i("RESPONSE", "response: " + output[0]);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    output[0] = null;
+                }
+
+            }
+        };
+
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return output[0];
+    }
+
+    public String buildUUIDString(ArrayList<String> uuids){
+        StringBuilder body = new StringBuilder("[ ");
+        for (String uuid: uuids){
+            if (!uuid.equals(uuids.get(uuids.size()-1))) {
+                body.append("'").append(uuid).append("', ");
+            } else{
+                body.append("'").append(uuid).append("' ");
+            }
+        }
+        body.append("]");
+        return body.toString();
     }
 
 
