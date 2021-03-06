@@ -21,21 +21,17 @@ import androidx.room.Room;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingService;
-import com.google.firebase.messaging.RemoteMessage;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import edu.temple.contacttracer.database.AppDatabase;
 import edu.temple.contacttracer.database.ContactUUIDDao;
 import edu.temple.contacttracer.database.ContactUUIDModel;
+import edu.temple.contacttracer.models.PayloadModel;
+import edu.temple.contacttracer.models.TracingModel;
 import okhttp3.*;
+import org.jetbrains.annotations.NotNull;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.lang.reflect.Type;
 import java.util.*;
 
 // https://developer.android.com/guide/components/services
@@ -153,11 +149,18 @@ public class LocatorService extends Service {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
                 String msg = task.isSuccessful()? "success": "failed";
-                Log.d("subscribeMessage", msg);
+                Log.d("TRACKING subscribeMessage", msg);
             }
         });
 
-
+        // subscribe to firebase messaging TRACING topic
+        FirebaseMessaging.getInstance().subscribeToTopic("TRACING").addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull @NotNull Task<Void> task) {
+                String msg = task.isSuccessful()? "success": "failed";
+                Log.d("TRACING subscribeMessage", msg);
+            }
+        });
 
 
     }
@@ -306,15 +309,26 @@ public class LocatorService extends Service {
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            payload = intent.getStringExtra("payload");
-            Log.i("receive payload", "onReceive: " + payload);
-            PayloadModel payloadModel = generatePayloadModel(payload);
-            if (isGrater6Feet_differentUUID(payloadModel)){
-                storePayload(payloadModel);
-                Log.i("PAYLOAD", "onReceive " + "received new filtered payload");
-                logDatabase();
-            } else{
-                Log.i("PAYLOAD", "onReceive " + "cannot add payload, either > 6 feet or same uuid");
+            String type = intent.getStringExtra("type");
+            switch (type){
+                case "tracing":
+                    payload = intent.getStringExtra("tracing");
+
+                    TracingModel tracingModel = generateTracingModel(payload);
+                    Log.i("receive tracking payload", "onReceive: " + payload);
+                    break;
+                case "tracking":
+                    payload = intent.getStringExtra("tracking");
+                    Log.i("receive tracing payload", "onReceive: " + payload);
+                    PayloadModel payloadModel = generatePayloadModel(payload);
+                    if (isGrater6Feet_differentUUID(payloadModel)){
+                        storePayload(payloadModel);
+                        Log.i("TRACING PAYLOAD", "onReceive " + "received new filtered payload");
+                        logDatabase();
+                    } else{
+                        Log.i("PAYLOAD", "onReceive " + "cannot add payload, either > 6 feet or same uuid");
+                    }
+                    break;
             }
 
         }
@@ -436,6 +450,20 @@ public class LocatorService extends Service {
             Log.i("PAYLOADMODEL", "generatePayloadModel: " + model.toString());
             return model;
         } catch(Exception e){
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private TracingModel generateTracingModel(String payload){
+        try{
+            JsonObject payloadObject = new JsonParser().parse(payload).getAsJsonObject();
+            long date = payloadObject.get("date").getAsLong();
+            JsonElement uuidElement = payloadObject.get("uuids");
+            Type arraylistType = new TypeToken<ArrayList<String>>() {}.getType();
+            ArrayList<String> uuids = new Gson().fromJson(uuidElement, arraylistType);
+            return new TracingModel(date, uuids);
+        }catch (Exception e){
             e.printStackTrace();
             return null;
         }

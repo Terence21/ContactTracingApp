@@ -1,4 +1,4 @@
-package edu.temple.contacttracer;
+package edu.temple.contacttracer.models;
 
 import android.location.LocationListener;
 import android.location.LocationManager;
