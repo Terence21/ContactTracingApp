@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.util.Log;
@@ -231,13 +232,19 @@ public class LocatorService extends Service {
     }
 
     public void showNotification(NotificationID notificationID, ContactUUIDModel contactUUIDModel){
+        Log.i("mapView", "onMapReady: lat: " + contactUUIDModel.latitude + "\tlong: " + contactUUIDModel.longitude);
         Intent notificationIntent = new Intent(this, MainActivity.class);
+        Bundle bundle = new Bundle();
+        bundle.putDouble("lat", contactUUIDModel.latitude);
+        bundle.putDouble("longitude", contactUUIDModel.longitude);
+        bundle.putDouble("date", contactUUIDModel.sedentary_end);
         notificationIntent.setAction("TraceFragment");
-        notificationIntent.putExtra("latitidue", contactUUIDModel.latitude);
+        notificationIntent.putExtra("lat", contactUUIDModel.latitude);
         notificationIntent.putExtra("longitude", contactUUIDModel.longitude);
         notificationIntent.putExtra("date", contactUUIDModel.sedentary_end);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-
+        notificationIntent.putExtra("bundle", bundle);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT);
 
         String channelID = "default";
         String channelName = "Foreground Service Channel";
@@ -356,15 +363,6 @@ public class LocatorService extends Service {
                         TracingModel tracingModel = generateTracingModel(payload);
                         Log.i("receive tracking payload", "onReceive: " + payload);
                         notifyCovidContact(tracingModel);
-                        //if the received model
-                       /* boolean isLocalReport = containsLocalTracing(tracingModel);
-                        if (!isLocalReport){
-                            Log.i("TRACING PAYLOAD", "onReceive: received new filtered tracing payload");
-                            notifyCovidContact(tracingModel);
-
-                        }else{
-                            Log.i("TRACING PAYLOAD", "onReceive " + "cannot add payload same uuid");
-                        }*/
                         break;
                     case "tracking":
                         payload = intent.getStringExtra("tracking");
@@ -646,9 +644,17 @@ public class LocatorService extends Service {
             showNotification(NotificationID.CONTACT_NOTIFICATION, madeContactModel);
             // call up map fragment to show location and time of content
             Intent intent = new Intent("TraceFragment");
+            Bundle bundle = new Bundle();
+            bundle.putDouble("lat", madeContactModel.latitude);
+            bundle.putDouble("longitude", madeContactModel.longitude);
+            bundle.putDouble("date", madeContactModel.sedentary_end);
             intent.putExtra("latitude", madeContactModel.latitude);
+            Log.i("mapView", "onMapReady: lat: " + madeContactModel.latitude + "\tlong: " + madeContactModel.longitude);
+            intent.putExtra("lat", madeContactModel.latitude);
             intent.putExtra("longitude", madeContactModel.longitude);
             intent.putExtra("date", madeContactModel.sedentary_end);
+            intent.putExtra("bundle", bundle);
+
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
         } else{
             Log.i("CONTACT_NOTIFICATION", "notifyCovidContact: NOT SENT NOTIFICATION, NO CONTACT MADE OR SAME UUID");
@@ -661,6 +667,8 @@ public class LocatorService extends Service {
         SEDENTARY_NOTIFICATION, CONTACT_NOTIFICATION
 
     }
+
+
 
 
 }

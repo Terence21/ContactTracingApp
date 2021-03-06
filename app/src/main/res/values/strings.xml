@@ -2,4 +2,7 @@
     <string name="app_name">Contact Tracing App</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="latitude_key">lat</string>
+    <string name="longitude_key">longitude</string>
+    <string name="date_key">date</string>
 </resources>

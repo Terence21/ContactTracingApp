@@ -201,7 +201,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // db.close();
+        db.close();
     }
 
     /**
@@ -364,17 +364,21 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
+    private double latitude;
+    private double longitude;
+    private long date;
     private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.i("isVisible", "isVisible: " + isVisible);
             if (isVisible) {
                 if (intent.getAction().equals("TraceFragment")) {
-                    double latitude = 0, longitude = 0;
-                    long date = 0;
-                    latitude = intent.getDoubleExtra("latitude", latitude);
-                    longitude = intent.getDoubleExtra("longitude", longitude);
-                    date = intent.getLongExtra("date", date);
+ 
+                    Bundle extras = intent.getExtras();
+                    latitude = extras.getDouble("lat");
+                    longitude = intent.getDoubleExtra(getString(R.string.longitude_key), longitude);
+                    date = intent.getLongExtra(getString(R.string.date_key), date);
+
                     TraceFragment traceFragment = TraceFragment.newInstance(date, latitude, longitude);
                     fm.beginTransaction()
                             .replace(R.id._mainFragmentFrame, traceFragment, "tf")
@@ -401,6 +405,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         if (intent.getAction().equals("TraceFragment")){
             Log.i("TraceFragment action", "onNewIntent: traceFragment notificationIntent");
             isVisible = true;
+            Log.i("mapview", "onNewIntent: " + intent.getDoubleExtra("latitude", latitude));
             broadcastReceiver.onReceive(this, intent);
         }
 
