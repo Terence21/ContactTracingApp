@@ -320,6 +320,13 @@ public class LocatorService extends Service {
 
                         TracingModel tracingModel = generateTracingModel(payload);
                         Log.i("receive tracking payload", "onReceive: " + payload);
+
+                        boolean isLocalReport = containsLocalTracing(tracingModel);
+                        if (!isLocalReport){
+                            Log.i("TRACING PAYLOAD", "onReceive: received new filtered tracing payload");
+                        }else{
+                            Log.i("TRACING PAYLOAD", "onReceive " + "cannot add payload same uuid");
+                        }
                         break;
                     case "tracking":
                         payload = intent.getStringExtra("tracking");
@@ -327,10 +334,10 @@ public class LocatorService extends Service {
                         PayloadModel payloadModel = generatePayloadModel(payload);
                         if (isGrater6Feet_differentUUID(payloadModel)) {
                             storePayload(payloadModel);
-                            Log.i("TRACING PAYLOAD", "onReceive " + "received new filtered payload");
+                            Log.i("TRACKING PAYLOAD", "onReceive " + "received new filtered tracking payload");
                             logDatabase();
                         } else {
-                            Log.i("PAYLOAD", "onReceive " + "cannot add payload, either > 6 feet or same uuid");
+                            Log.i("TRACKING PAYLOAD", "onReceive " + "cannot add payload, either > 6 feet or same uuid");
                         }
                         break;
                 }
@@ -534,6 +541,33 @@ public class LocatorService extends Service {
         }
         body.append("]");
         return body.toString();
+    }
+
+    public boolean containsLocalTracing(final TracingModel tracingModel){
+        final boolean[] doesContain = {false};
+        Thread thread = new Thread(){
+            @Override
+            public void run() {
+                super.run();
+                db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
+                contactUUIDDao = db.contactUUIDDao();
+                ArrayList<ContactUUIDModel> contactUUIDModels = (ArrayList<ContactUUIDModel>) contactUUIDDao.getAllLocal();
+                for (ContactUUIDModel model : contactUUIDModels){
+                    if (tracingModel.getUuids().contains(model.uuid)){
+                        doesContain[0] = true;
+                    }
+                }
+
+
+            }
+        };
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return doesContain[0];
     }
 
 

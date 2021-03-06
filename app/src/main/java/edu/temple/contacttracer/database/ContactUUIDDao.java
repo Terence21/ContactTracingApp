@@ -48,4 +48,7 @@ public interface ContactUUIDDao {
     @Query("SELECT * FROM ContactUUIDModel WHERE isLocal = 1 AND sedentary_begin > 0.0")
     List<ContactUUIDModel> getPreviousDays();
 
+    @Query("SELECT * FROM CONTACTUUIDMODEL WHERE isLocal = 1")
+    List<ContactUUIDModel> getAllLocal();
+
 }

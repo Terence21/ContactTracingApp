@@ -21,7 +21,7 @@ import edu.temple.contacttracer.database.ContactUUIDModel;
 import java.util.*;
 
 
-// need to check that the primary key doesn't exist already before trying to add it to the table
+// need to send distinct sql query for uuids
 
 
 public class MainActivity extends AppCompatActivity implements DashboardFragment.ActivateServiceInterface {
