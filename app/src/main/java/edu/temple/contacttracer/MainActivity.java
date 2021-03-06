@@ -373,7 +373,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
             Log.i("isVisible", "isVisible: " + isVisible);
             if (isVisible) {
                 if (intent.getAction().equals("TraceFragment")) {
- 
+
                     Bundle extras = intent.getExtras();
                     latitude = extras.getDouble("lat");
                     longitude = intent.getDoubleExtra(getString(R.string.longitude_key), longitude);

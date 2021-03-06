@@ -16,7 +16,7 @@
             android:theme="@style/Theme.MaterialComponents.Light">
         <meta-data
                 android:name="com.google.android.geo.API_KEY"
-                android:value="AIzaSyDgstU_6IZzK4UWX2yd59HZlF2rwPpEFoE" />
+                android:value="@string/maps_api_key" />
         <activity android:name="edu.temple.contacttracer.MainActivity" android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

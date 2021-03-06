@@ -77,13 +77,14 @@ public class TraceFragment extends Fragment implements  OnMapReadyCallback{
 
         mapView.onCreate(savedInstanceState);
         String dateText = "CONTACT DATE:\n" + calendar.get(Calendar.DAY_OF_MONTH) + "/" +
-                calendar.get(Calendar.MONTH) + "/" +
+                (calendar.get(Calendar.MONTH) + 1) + "/" +
                 calendar.get(Calendar.YEAR);
 
+        String am_pm = (calendar.get(Calendar.AM_PM) == Calendar.AM)? "am":"pm";
         String timeText = "CONTACT TIME:\n" + calendar.get(Calendar.HOUR) + ":" +
                 calendar.get(Calendar.MINUTE) + ":" +
                 calendar.get(Calendar.SECOND) + ":" +
-                calendar.get(Calendar.AM_PM);
+                am_pm;
 
         dateTextView.setText(dateText);
         timeTextView.setText(timeText);
