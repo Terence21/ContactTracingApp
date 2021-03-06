@@ -51,4 +51,7 @@ public interface ContactUUIDDao {
     @Query("SELECT * FROM CONTACTUUIDMODEL WHERE isLocal = 1")
     List<ContactUUIDModel> getAllLocal();
 
+    @Query("SELECT * FROM ContactUUIDModel WHERE isLocal = 0")
+    List<ContactUUIDModel> getAllContact();
+
 }

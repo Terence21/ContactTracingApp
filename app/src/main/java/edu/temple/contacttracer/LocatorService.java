@@ -31,7 +31,6 @@ import edu.temple.contacttracer.models.TracingModel;
 import okhttp3.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.*;
 
@@ -127,7 +126,7 @@ public class LocatorService extends Service {
                 }
 
                 if (location.distanceTo(prevLocation) >= 10.0) {
-                    showNotification();
+                    showNotification(NotificationID.SEDENTARY_NOTIFICATION);
                     // restart the countDownTimer
                     if (isCountdown){
                         countDownTimer.cancel();
@@ -199,7 +198,7 @@ public class LocatorService extends Service {
     /**
      * create notification channel and start foreground service
      */
-    public void showNotification(){
+    public void showNotification(NotificationID notificationID){
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
@@ -214,17 +213,31 @@ public class LocatorService extends Service {
 
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, channelID);
-        Notification notification = notificationBuilder.setOngoing(true)
-                .setContentTitle("Location change")
-                .setContentText("you have moved 10 meters from your last location")
-                .setSmallIcon(R.drawable.ic_launcher_background)
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(false)
-                .setPriority(NotificationManager.IMPORTANCE_MAX)
-                .setCategory(Notification.CATEGORY_SERVICE)
-                .build();
+        if (notificationID == NotificationID.SEDENTARY_NOTIFICATION) {
+            Notification notification = notificationBuilder.setOngoing(true)
+                    .setContentTitle("Location change")
+                    .setContentText("you have moved 10 meters from your last location")
+                    .setSmallIcon(R.drawable.ic_launcher_background)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(false)
+                    .setPriority(NotificationManager.IMPORTANCE_MAX)
+                    .setCategory(Notification.CATEGORY_SERVICE)
+                    .build();
+            startForeground(2, notification);
+        } else if (notificationID == NotificationID.CONTACT_NOTIFICATION){
+            Notification notification = notificationBuilder.setOngoing(true)
+                    .setContentTitle("COVID CONTACT MADE")
+                    .setContentText("you have recently made contact with someone who has confirmed COVID contraction")
+                    .setSmallIcon(R.drawable.ic_launcher_background)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(false)
+                    .setPriority(NotificationManager.IMPORTANCE_MAX)
+                    .setCategory(Notification.CATEGORY_SERVICE)
+                    .build();
+            startForeground(3, notification);
+        }
 
-        startForeground(2, notification);
+
     }
 
 
@@ -321,9 +334,12 @@ public class LocatorService extends Service {
                         TracingModel tracingModel = generateTracingModel(payload);
                         Log.i("receive tracking payload", "onReceive: " + payload);
 
+                        //if the received model
                         boolean isLocalReport = containsLocalTracing(tracingModel);
                         if (!isLocalReport){
                             Log.i("TRACING PAYLOAD", "onReceive: received new filtered tracing payload");
+                            notifyCovidContact(tracingModel);
+
                         }else{
                             Log.i("TRACING PAYLOAD", "onReceive " + "cannot add payload same uuid");
                         }
@@ -553,8 +569,9 @@ public class LocatorService extends Service {
                 contactUUIDDao = db.contactUUIDDao();
                 ArrayList<ContactUUIDModel> contactUUIDModels = (ArrayList<ContactUUIDModel>) contactUUIDDao.getAllLocal();
                 for (ContactUUIDModel model : contactUUIDModels){
-                    if (tracingModel.getUuids().contains(model.uuid)){
+                    if (tracingModel.getUuids().contains(model.uuid)) {
                         doesContain[0] = true;
+                        break;
                     }
                 }
 
@@ -568,6 +585,54 @@ public class LocatorService extends Service {
             e.printStackTrace();
         }
         return doesContain[0];
+    }
+
+    public ContactUUIDModel getCovidContactModel(final TracingModel tracingModel){
+        final ContactUUIDModel[] madeContact = {null};
+
+        Thread thread = new Thread(){
+            @Override
+            public void run() {
+                super.run();
+                super.run();
+                db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "uuid-database").build();
+                contactUUIDDao = db.contactUUIDDao();
+                ArrayList<ContactUUIDModel> contactUUIDModels = (ArrayList<ContactUUIDModel>) contactUUIDDao.getAllContact();
+                for (ContactUUIDModel model : contactUUIDModels){
+                    if (tracingModel.getUuids().contains(model.uuid)){
+                        madeContact[0] = model;
+                        break;
+                    }
+                }
+
+            }
+        };
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return madeContact[0];
+
+    }
+    public void notifyCovidContact(TracingModel tracingModel){
+        ContactUUIDModel madeContactModel = getCovidContactModel(tracingModel);
+        if (madeContactModel != null){
+            Log.i("CONTACT_NOTIFICATION", "notifyCovidContact: SENT NOTIFICATION");
+            showNotification(NotificationID.CONTACT_NOTIFICATION);
+            // call up map fragment to show location and time of content
+        } else{
+            Log.i("CONTACT_NOTIFICATION", "notifyCovidContact: NOT SENT NOTIFICATION, NO CONTACT MADE");
+        }
+    }
+
+
+
+    private enum NotificationID {
+        SEDENTARY_NOTIFICATION, CONTACT_NOTIFICATION
+
     }
 
 

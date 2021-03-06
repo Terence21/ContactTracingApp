@@ -17,6 +17,7 @@ import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClic
 import edu.temple.contacttracer.database.AppDatabase;
 import edu.temple.contacttracer.database.ContactUUIDDao;
 import edu.temple.contacttracer.database.ContactUUIDModel;
+import edu.temple.contacttracer.models.TracingModel;
 
 import java.util.*;
 
