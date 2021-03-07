@@ -1,4 +1,4 @@
-package temple.edu.contacttracingapp;
+package edu.temple.contacttracer;
 
 import android.content.Context;
 import androidx.test.platform.app.InstrumentationRegistry;
