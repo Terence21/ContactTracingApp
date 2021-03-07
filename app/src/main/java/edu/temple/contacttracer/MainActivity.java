@@ -51,19 +51,15 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         isVisible = true;
+        fm = getSupportFragmentManager();
 
-        Intent callingIntent = getIntent();
-        if (callingIntent != null){
 
-        }
 
         if (!hasGPSPermission()) {
             requestGPSPermission();
         }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("TraceFragment"));
-
-        fm = getSupportFragmentManager();
 
         dashboardFragment = DashboardFragment.newInstance();
 
@@ -76,6 +72,27 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         contactUUIDDao = db.contactUUIDDao();
         updateUUID();
         logDatabase();
+
+        // if activity activated by notification open this way
+        Intent intent = getIntent();
+        if (intent != null){
+            if (intent.getAction().equals("TraceFragment")) {
+                double latitude =0;
+                double longitude = 0;
+                long date = 0;
+                Bundle extras = intent.getExtras();
+                latitude = extras.getDouble("lat");
+                longitude = intent.getDoubleExtra(getString(R.string.longitude_key), longitude);
+                date = intent.getLongExtra(getString(R.string.date_key), date);
+
+                TraceFragment traceFragment = TraceFragment.newInstance(date, latitude, longitude);
+                fm.beginTransaction()
+                        .replace(R.id._mainFragmentFrame, traceFragment, "tf")
+                        .addToBackStack(null)
+                        .commit();
+
+            }
+        }
 
 
 
@@ -252,7 +269,12 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         Log.i("LocatorService", "Stopping LocatorService ");
     }
 
+
     private String selectedDate;
+
+    /**
+     * show datePicker to user
+     */
     @Override
     public void showCalendar() {
         MaterialDatePicker.Builder<Long> materialDateBuilder = MaterialDatePicker.Builder.datePicker();
@@ -273,7 +295,9 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         });
     }
 
-
+    /**
+     * convert the date returned by date picker to milliseconds
+     */
     private long convertDate(String date){
         date = date.replace(",", "");
         date = date.trim();
@@ -331,6 +355,10 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
 
     }
 
+    /**
+     *
+     * @return helper method to return list of previous uuids before today
+     */
     private ArrayList<String> previousUUIDs(){
         ArrayList<String> uuids = new ArrayList<>();
         final ArrayList<ContactUUIDModel>[] previousDays = new ArrayList[]{new ArrayList<>()};
@@ -354,6 +382,11 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         return uuids;
     }
 
+    /**
+     * broadcast the previous uuids as strings and the current contact date to the service
+     * to be used for post request to server to broadcast to other devices
+     * @param date
+     */
     public void alertLocatorServiceDate(String date){
         long date_long = convertDate(date);
         ArrayList<String> uuids = previousUUIDs();
@@ -364,16 +397,19 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
-    private double latitude;
-    private double longitude;
-    private long date;
+
     private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        /**
+         * when LocatorService sends broadcast for tracFragment create instance of TraceFragment
+         */
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.i("isVisible", "isVisible: " + isVisible);
             if (isVisible) {
                 if (intent.getAction().equals("TraceFragment")) {
-
+                    double latitude =0;
+                    double longitude = 0;
+                    long date = 0;
                     Bundle extras = intent.getExtras();
                     latitude = extras.getDouble("lat");
                     longitude = intent.getDoubleExtra(getString(R.string.longitude_key), longitude);
@@ -391,13 +427,20 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     };
 
     private boolean isVisible;
+
+    /**
+     * when the activity is not in foreground set to false
+     */
     @Override
     protected void onPause() {
         super.onPause();
         isVisible = false;
     }
 
-
+    /**
+     * If LocatorService notification is selected then Intent is sent to open application. In this instance open up app
+     * @param intent
+     */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -405,7 +448,6 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         if (intent.getAction().equals("TraceFragment")){
             Log.i("TraceFragment action", "onNewIntent: traceFragment notificationIntent");
             isVisible = true;
-            Log.i("mapview", "onNewIntent: " + intent.getDoubleExtra("latitude", latitude));
             broadcastReceiver.onReceive(this, intent);
         }
 
