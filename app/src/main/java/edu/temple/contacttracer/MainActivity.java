@@ -7,33 +7,32 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.util.Log;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import androidx.fragment.app.FragmentManager;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.room.Ignore;
 import androidx.room.Room;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
 import edu.temple.contacttracer.database.AppDatabase;
 import edu.temple.contacttracer.database.ContactUUIDDao;
 import edu.temple.contacttracer.database.ContactUUIDModel;
+import edu.temple.contacttracer.fragments.DashboardFragment;
+import edu.temple.contacttracer.fragments.TraceFragment;
+import edu.temple.contacttracer.services.LocatorService;
 
 import java.util.*;
 
 
-// need to check that the primary key doesn't exist already before trying to add it to the table
+// need to send distinct sql query for uuids
 
 
 public class MainActivity extends AppCompatActivity implements DashboardFragment.ActivateServiceInterface {
 
     FragmentManager fm;
     DashboardFragment dashboardFragment;
+    TraceFragment traceFragment;
 
     private String payload;
 
@@ -51,14 +50,16 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        isVisible = true;
+        fm = getSupportFragmentManager();
+
+
 
         if (!hasGPSPermission()) {
             requestGPSPermission();
         }
 
-
-
-        fm = getSupportFragmentManager();
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("TraceFragment"));
 
         dashboardFragment = DashboardFragment.newInstance();
 
@@ -72,8 +73,36 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
         updateUUID();
         logDatabase();
 
+        // if activity activated by notification open this way
+        Intent intent = getIntent();
+        if (intent != null){
+            if (intent.getAction().equals("TraceFragment")) {
+                double latitude =0;
+                double longitude = 0;
+                long date = 0;
+                Bundle extras = intent.getExtras();
+                latitude = extras.getDouble("lat");
+                longitude = intent.getDoubleExtra(getString(R.string.longitude_key), longitude);
+                date = intent.getLongExtra(getString(R.string.date_key), date);
+
+                TraceFragment traceFragment = TraceFragment.newInstance(date, latitude, longitude);
+                fm.beginTransaction()
+                        .replace(R.id._mainFragmentFrame, traceFragment, "tf")
+                        .addToBackStack(null)
+                        .commit();
+
+            }
+        }
 
 
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isVisible = true;
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("TraceFragment"));
     }
 
     /**
@@ -189,7 +218,7 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // db.close();
+        db.close();
     }
 
     /**
@@ -241,5 +270,187 @@ public class MainActivity extends AppCompatActivity implements DashboardFragment
     }
 
 
+    private String selectedDate;
+
+    /**
+     * show datePicker to user
+     */
+    @Override
+    public void showCalendar() {
+        MaterialDatePicker.Builder<Long> materialDateBuilder = MaterialDatePicker.Builder.datePicker();
+        materialDateBuilder.setTitleText("SELECT A DATE");
+
+        final MaterialDatePicker<Long> materialDatePicker = materialDateBuilder.build();
+        materialDatePicker.show(getSupportFragmentManager(), "MATERIAL_DATE_PICKER");
+
+        materialDatePicker.addOnPositiveButtonClickListener(new MaterialPickerOnPositiveButtonClickListener() {
+            @Override
+            public void onPositiveButtonClick(Object selection) {
+                Log.i("test", "onPositiveButtonClick: clicked");
+                selectedDate = materialDatePicker.getHeaderText();
+
+                alertLocatorServiceDate(selectedDate);
+
+            }
+        });
+    }
+
+    /**
+     * convert the date returned by date picker to milliseconds
+     */
+    private long convertDate(String date){
+        date = date.replace(",", "");
+        date = date.trim();
+        Log.i("DATE", "onPositiveButtonClick: " + selectedDate);
+        String [] dates = date.split(" ");
+        Log.i("split", "convertDate: " + Arrays.toString(dates));
+        int month = -1;
+        switch (dates[0]){
+            case "Jan":
+                month = 1;
+                break;
+            case "Feb":
+                month = 2;
+                break;
+            case "Mar":
+                month = 3;
+                break;
+            case "Apr":
+                month = 4;
+                break;
+            case "May":
+                month = 5;
+                break;
+            case "Jun":
+                month = 6;
+                break;
+            case "Jul":
+                month = 7;
+                break;
+            case "Aug":
+                month = 8;
+                break;
+            case "Sep":
+                month = 9;
+                break;
+            case "Oct":
+                month = 10;
+                break;
+            case "Nov":
+                month = 11;
+                break;
+            case "Dec":
+                month = 12;
+                break;
+        }
+
+        int day = Integer.valueOf(dates[1]).intValue();
+        int year = Integer.valueOf(dates[2]).intValue();
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(year, month, day);
+
+        return calendar.getTimeInMillis();
+
+
+    }
+
+    /**
+     *
+     * @return helper method to return list of previous uuids before today
+     */
+    private ArrayList<String> previousUUIDs(){
+        ArrayList<String> uuids = new ArrayList<>();
+        final ArrayList<ContactUUIDModel>[] previousDays = new ArrayList[]{new ArrayList<>()};
+        Thread thread = new Thread(){
+            @Override
+            public void run() {
+                super.run();
+                previousDays[0] = (ArrayList<ContactUUIDModel>) contactUUIDDao.getPreviousDays();
+            }
+        };
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        for (ContactUUIDModel day: previousDays[0]){
+            uuids.add(day.uuid);
+        }
+        return uuids;
+    }
+
+    /**
+     * broadcast the previous uuids as strings and the current contact date to the service
+     * to be used for post request to server to broadcast to other devices
+     * @param date
+     */
+    public void alertLocatorServiceDate(String date){
+        long date_long = convertDate(date);
+        ArrayList<String> uuids = previousUUIDs();
+
+        Intent intent = new Intent("CONTACT");
+        intent.putExtra("date", date_long);
+        intent.putExtra("uuids", uuids);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+
+    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        /**
+         * when LocatorService sends broadcast for tracFragment create instance of TraceFragment
+         */
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.i("isVisible", "isVisible: " + isVisible);
+            if (isVisible) {
+                if (intent.getAction().equals("TraceFragment")) {
+                    double latitude =0;
+                    double longitude = 0;
+                    long date = 0;
+                    Bundle extras = intent.getExtras();
+                    latitude = extras.getDouble("lat");
+                    longitude = intent.getDoubleExtra(getString(R.string.longitude_key), longitude);
+                    date = intent.getLongExtra(getString(R.string.date_key), date);
+
+                    TraceFragment traceFragment = TraceFragment.newInstance(date, latitude, longitude);
+                    fm.beginTransaction()
+                            .replace(R.id._mainFragmentFrame, traceFragment, "tf")
+                            .addToBackStack(null)
+                            .commit();
+
+                }
+            }
+        }
+    };
+
+    private boolean isVisible;
+
+    /**
+     * when the activity is not in foreground set to false
+     */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isVisible = false;
+    }
+
+    /**
+     * If LocatorService notification is selected then Intent is sent to open application. In this instance open up app
+     * @param intent
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        if (intent.getAction().equals("TraceFragment")){
+            Log.i("TraceFragment action", "onNewIntent: traceFragment notificationIntent");
+            isVisible = true;
+            broadcastReceiver.onReceive(this, intent);
+        }
+
+    }
 }
 

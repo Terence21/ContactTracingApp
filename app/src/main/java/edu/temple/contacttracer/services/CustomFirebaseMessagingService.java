@@ -1,4 +1,4 @@
-package edu.temple.contacttracer;
+package edu.temple.contacttracer.services;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -10,6 +10,8 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 
 /**
@@ -43,10 +45,11 @@ public class CustomFirebaseMessagingService extends FirebaseMessagingService {
 
         payload = remoteMessage.getData().get("payload");
         Log.i("PAYLOAD", "onMessageReceived: " + payload);
+        /*Intent intent = new Intent("FMS");
+        intent.putExtra("tracking payload", payload);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);*/
+        handleTopic(remoteMessage);
 
-        Intent intent = new Intent("FMS");
-        intent.putExtra("payload", payload);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
 
     }
 
@@ -54,6 +57,27 @@ public class CustomFirebaseMessagingService extends FirebaseMessagingService {
     public void onNewToken(@NonNull @NotNull String s) {
         super.onNewToken(s);
 
+    }
+
+    public void handleTopic(RemoteMessage message){
+        String messageTopic = message.getFrom();
+        if (messageTopic == null){
+            Log.i("BAD TOPIC", "handleTopic: null topic");
+        } else {
+            Intent intent = new Intent("FMS");
+            switch (Objects.requireNonNull(messageTopic)) {
+                case "/topics/TRACING":
+                    intent.putExtra("type", "tracing");
+                    intent.putExtra("tracing", payload);
+                    break;
+                case "/topics/TRACKING":
+                    intent.putExtra("type", "tracking");
+                    intent.putExtra("tracking", payload);
+                    break;
+
+            }
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        }
     }
 
 
